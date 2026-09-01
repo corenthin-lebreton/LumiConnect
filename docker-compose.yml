@@ -1,0 +1,31 @@
+# LumiConnect — application web + worker.
+#
+# Les deux services partagent la même image de base et le même fichier d'environnement, mais
+# ont des cycles de vie distincts : redéployer l'application n'interrompt plus un déploiement
+# de VMs en cours, puisque c'est le worker qui l'exécute.
+
+services:
+  web:
+    build:
+      context: .
+      target: runner
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file: .env.local
+    ports:
+      - "${APP_PORT:-8002}:8002"
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      target: worker
+    env_file: .env.local
+    restart: unless-stopped
+    # Un seul worker suffit et évite toute question d'ordonnancement. La prise de travail
+    # utilise SKIP LOCKED, donc monter à plusieurs répliques reste possible sans double
+    # exécution — mais chaque réplique consomme des connexions Proxmox en parallèle.
+    deploy:
+      replicas: 1
+    stop_grace_period: 120s

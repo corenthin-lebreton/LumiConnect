@@ -1,0 +1,49 @@
+{
+  "os_id": "win11",
+  "shell": "powershell",
+  "scripts": [
+    {
+      "id": "base",
+      "label": "Configuration de base",
+      "description": "Nom de machine, compte utilisateur, carte réseau en DHCP, activation du Bureau à distance.",
+      "mandatory": true,
+      "timeout_sec": 600,
+      "reboot_after": true
+    },
+    {
+      "id": "choco",
+      "label": "Chocolatey",
+      "description": "Gestionnaire de paquets machine, prérequis des autres installations Windows.",
+      "timeout_sec": 600
+    },
+    {
+      "id": "git",
+      "label": "Git",
+      "description": "Git pour Windows.",
+      "requires": ["choco"],
+      "timeout_sec": 900
+    },
+    {
+      "id": "docker",
+      "label": "Docker Desktop",
+      "description": "WSL2 puis Docker Desktop. Le démon démarre à l'ouverture de session du stagiaire.",
+      "requires": ["choco"],
+      "timeout_sec": 3600,
+      "reboot_after": true
+    },
+    {
+      "id": "sqlserver",
+      "label": "SQL Server Express",
+      "description": "SQL Server 2022 Express, instance SQLEXPRESS, authentification mixte. Le compte du stagiaire est sysadmin, le mot de passe sa est celui de sa session. L'édition plafonne à 10 Go par base et 1410 Mo de RAM, quel que soit le curseur de la formation.",
+      "requires": ["choco"],
+      "timeout_sec": 1800
+    },
+    {
+      "id": "ssms",
+      "label": "SQL Server Management Studio",
+      "description": "Console d'administration graphique, à ouvrir sur localhost\\SQLEXPRESS.",
+      "requires": ["sqlserver"],
+      "timeout_sec": 1800
+    }
+  ]
+}
