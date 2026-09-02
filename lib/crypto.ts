@@ -20,7 +20,7 @@ function loadKey(): Buffer {
   return key;
 }
 
-export function isEncrypted(value: string): boolean {
+function isEncrypted(value: string): boolean {
   return value.startsWith(`${SCHEME}:`);
 }
 

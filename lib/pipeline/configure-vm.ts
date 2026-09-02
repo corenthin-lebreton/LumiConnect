@@ -11,9 +11,9 @@ import { loadScriptContent, type ScriptEntry, type ScriptRegistry } from "@/lib/
 import { markStep } from "@/lib/progress";
 import type { StepDefinition } from "@/lib/progress";
 
-export const START_STEP = "start";
-export const AGENT_STEP = "wait_agent";
-export const CONTEXT_STEP = "context";
+const START_STEP = "start";
+const AGENT_STEP = "wait_agent";
+const CONTEXT_STEP = "context";
 
 export const CONFIGURE_STEPS: StepDefinition[] = [
   { step: START_STEP, label: "Démarrage" },
@@ -21,7 +21,7 @@ export const CONFIGURE_STEPS: StepDefinition[] = [
   { step: CONTEXT_STEP, label: "Contexte" },
 ];
 
-export function scriptStep(scriptId: string): string {
+function scriptStep(scriptId: string): string {
   return `script:${scriptId}`;
 }
 
@@ -102,6 +102,9 @@ export interface ConfigureVmResult {
 
 const COMMAND_TIMEOUT_MS = 60_000;
 
+const AGENT_SETTLE_MS = Number(process.env.LC_AGENT_SETTLE_SEC ?? 90) * 1000;
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 export async function configureVm(options: ConfigureVmOptions): Promise<ConfigureVmResult> {
   const { formationId, vmid, registry, entries, agentTimeoutMs } = options;
   const shell = registry.shell;
@@ -121,6 +124,7 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
   const agent = await waitForAgent(vmid, agentTimeoutMs);
   if (!agent.success) return fail(AGENT_STEP, agent.error!);
   await markStep(formationId, vmid, AGENT_STEP, "success");
+  await sleep(AGENT_SETTLE_MS);
 
   await markStep(formationId, vmid, CONTEXT_STEP, "running");
 
@@ -144,11 +148,7 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
     return fail(CONTEXT_STEP, (e as Error).message);
   }
 
-  const contextWritten = await guestFileWrite(
-    vmid,
-    paths.contextPath,
-    shell === "powershell" ? `\ufeff${contextBody}` : contextBody
-  );
+  const contextWritten = await guestFileWrite(vmid, paths.contextPath, contextBody);
   if (!contextWritten.success) {
     return fail(CONTEXT_STEP, `écriture du contexte : ${contextWritten.error}`);
   }

@@ -1,602 +1,692 @@
 {
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components.json": {
-    "mtime": 1778535063.0,
-    "ast_hash": "63b2c4fcf776fec9dbc76e94ea0d70c6",
-    "semantic_hash": "63b2c4fcf776fec9dbc76e94ea0d70c6"
+  "app/(auth)/layout.tsx": {
+    "mtime": 1788285058.4367003,
+    "seen": 1788377337.0606506,
+    "ast_hash": "892e5fd3df28023a83805a5ddfd17b37",
+    "semantic_hash": "892e5fd3df28023a83805a5ddfd17b37"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/postcss.config.mjs": {
-    "mtime": 1778535063.0,
-    "ast_hash": "239f3ebf717465dc636818a1a619398d",
-    "semantic_hash": "239f3ebf717465dc636818a1a619398d"
+  "app/(auth)/login/page.tsx": {
+    "mtime": 1788285058.436786,
+    "seen": 1788377337.0606554,
+    "ast_hash": "f7b5e749264a1499ea00d54acfc31a21",
+    "semantic_hash": "f7b5e749264a1499ea00d54acfc31a21"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/tsconfig.json": {
-    "mtime": 1778535063.0,
-    "ast_hash": "83170c78d6957a09cfc68c7f1329771d",
-    "semantic_hash": "83170c78d6957a09cfc68c7f1329771d"
+  "app/(dashboard)/formations/[id]/delete/page.tsx": {
+    "mtime": 1788285058.4369924,
+    "seen": 1788377337.060658,
+    "ast_hash": "380b555988a2057054034dd7f97f6229",
+    "semantic_hash": "380b555988a2057054034dd7f97f6229"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/proxy.ts": {
-    "mtime": 1787523281.7258515,
-    "ast_hash": "c7981165c1e7c398c0fedbe0e96b6dbc",
-    "semantic_hash": "c7981165c1e7c398c0fedbe0e96b6dbc"
+  "app/(dashboard)/formations/[id]/deploy/page.tsx": {
+    "mtime": 1788285058.4369924,
+    "seen": 1788377337.0606592,
+    "ast_hash": "f1098417c3a5050ec20aba3241fde4d7",
+    "semantic_hash": "f1098417c3a5050ec20aba3241fde4d7"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/package.json": {
-    "mtime": 1787481061.3608835,
-    "ast_hash": "cd28b9fcf5162b05d352735adae69f24",
-    "semantic_hash": "cd28b9fcf5162b05d352735adae69f24"
+  "app/(dashboard)/formations/[id]/page.tsx": {
+    "mtime": 1788350716.2247856,
+    "seen": 1788377337.0606604,
+    "ast_hash": "df548e501150b3120299d0649bb494d5",
+    "semantic_hash": "df548e501150b3120299d0649bb494d5"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/eslint.config.mjs": {
-    "mtime": 1787481154.406042,
-    "ast_hash": "67b0b2c9addc3abaa580f6ba21292fab",
-    "semantic_hash": "67b0b2c9addc3abaa580f6ba21292fab"
+  "app/(dashboard)/formations/new/page.tsx": {
+    "mtime": 1788285058.4371502,
+    "seen": 1788377337.0606616,
+    "ast_hash": "94ef3a6b798f23c866ee421a496536d3",
+    "semantic_hash": "94ef3a6b798f23c866ee421a496536d3"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/next.config.ts": {
-    "mtime": 1778535063.0,
-    "ast_hash": "51e5c8431a72397db0cc9f6e5f17fb1a",
-    "semantic_hash": "51e5c8431a72397db0cc9f6e5f17fb1a"
+  "app/(dashboard)/formations/page.tsx": {
+    "mtime": 1788285058.4371502,
+    "seen": 1788377337.0606627,
+    "ast_hash": "31dc4845abcb6cb348627145c6e9b06f",
+    "semantic_hash": "31dc4845abcb6cb348627145c6e9b06f"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/page.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "63b0312a14aff5fdd90016276d629702",
-    "semantic_hash": "63b0312a14aff5fdd90016276d629702"
+  "app/(dashboard)/layout.tsx": {
+    "mtime": 1788285058.4371502,
+    "seen": 1788377337.0606637,
+    "ast_hash": "2937c3a4a8f3013e5940006f7601118f",
+    "semantic_hash": "2937c3a4a8f3013e5940006f7601118f"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/providers.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "fe0523a39533b0519600cbb1ec290d8c",
-    "semantic_hash": "fe0523a39533b0519600cbb1ec290d8c"
+  "app/(dashboard)/users/page.tsx": {
+    "mtime": 1788381552.2227187,
+    "seen": 1788382130.7739656,
+    "ast_hash": "2e16ab904567bdb15ded968b028af35d",
+    "semantic_hash": "2e16ab904567bdb15ded968b028af35d"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/layout.tsx": {
-    "mtime": 1787521759.1800768,
-    "ast_hash": "5f0dc0d22b5f6e2e8205910b1fd0fe1d",
-    "semantic_hash": "5f0dc0d22b5f6e2e8205910b1fd0fe1d"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/(dashboard)/layout.tsx": {
-    "mtime": 1787521805.1078005,
-    "ast_hash": "c4e60666443256f09cd2e84000aa19e8",
-    "semantic_hash": "c4e60666443256f09cd2e84000aa19e8"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/(dashboard)/formations/page.tsx": {
-    "mtime": 1787521973.4311662,
-    "ast_hash": "da4f29ec138627040523b255ab11a94c",
-    "semantic_hash": "da4f29ec138627040523b255ab11a94c"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/(dashboard)/formations/[id]/page.tsx": {
-    "mtime": 1787522021.4019125,
-    "ast_hash": "12890c0d4334b487f738db8f9ae1c672",
-    "semantic_hash": "12890c0d4334b487f738db8f9ae1c672"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/(dashboard)/formations/[id]/deploy/page.tsx": {
-    "mtime": 1787486052.0431383,
-    "ast_hash": "d7a435c5ce6b885b451446d0a573b8c9",
-    "semantic_hash": "d7a435c5ce6b885b451446d0a573b8c9"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/(dashboard)/formations/[id]/delete/page.tsx": {
-    "mtime": 1787486036.4518244,
-    "ast_hash": "e7ab06c54e11974f3fd2c3effaa8613d",
-    "semantic_hash": "e7ab06c54e11974f3fd2c3effaa8613d"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/(dashboard)/formations/new/page.tsx": {
-    "mtime": 1787486052.0433216,
-    "ast_hash": "fd2e562dac991933b17ec76d0dcc05ae",
-    "semantic_hash": "fd2e562dac991933b17ec76d0dcc05ae"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/(dashboard)/users/page.tsx": {
-    "mtime": 1787522074.9636867,
-    "ast_hash": "4f01a9d8c822242521ca2508c546d119",
-    "semantic_hash": "4f01a9d8c822242521ca2508c546d119"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/(auth)/layout.tsx": {
-    "mtime": 1787521882.8262691,
-    "ast_hash": "e925c9cf181924d8c463002c175a6224",
-    "semantic_hash": "e925c9cf181924d8c463002c175a6224"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/(auth)/login/page.tsx": {
-    "mtime": 1787523368.8892264,
-    "ast_hash": "638af014017b2eac65bb9a0fba2feb35",
-    "semantic_hash": "638af014017b2eac65bb9a0fba2feb35"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/api/auth/callback/route.ts": {
-    "mtime": 1778535063.0,
+  "app/api/auth/callback/route.ts": {
+    "mtime": 1788285058.43768,
+    "seen": 1788377337.0606658,
     "ast_hash": "9629867d0641dc6762bee9a54b56d9c6",
     "semantic_hash": "9629867d0641dc6762bee9a54b56d9c6"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/api/health/route.ts": {
-    "mtime": 1778535063.0,
-    "ast_hash": "162481a7f36d7956b927627e4a2d6ca2",
-    "semantic_hash": "162481a7f36d7956b927627e4a2d6ca2"
+  "app/api/formations/[id]/delete/route.ts": {
+    "mtime": 1788285058.437823,
+    "seen": 1788377337.0606666,
+    "ast_hash": "b5ab2a12d34bf7c67fa19f8029d52c58",
+    "semantic_hash": "b5ab2a12d34bf7c67fa19f8029d52c58"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/api/healthz/route.ts": {
-    "mtime": 1778535063.0,
-    "ast_hash": "72960555c61d132034c6dd6ba1eb13a6",
-    "semantic_hash": "72960555c61d132034c6dd6ba1eb13a6"
+  "app/api/formations/[id]/deploy/route.ts": {
+    "mtime": 1788285058.437823,
+    "seen": 1788377337.0606682,
+    "ast_hash": "90af8841dcf34a892f58f7d44f832382",
+    "semantic_hash": "90af8841dcf34a892f58f7d44f832382"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/api/scripts/route.ts": {
-    "mtime": 1787482077.7940605,
-    "ast_hash": "5954713378d3c2ee454b89562207b413",
-    "semantic_hash": "5954713378d3c2ee454b89562207b413"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/api/formations/route.ts": {
-    "mtime": 1787481546.9090898,
-    "ast_hash": "52c00a7db5d3ad27ed5cfe48c6f1dced",
-    "semantic_hash": "52c00a7db5d3ad27ed5cfe48c6f1dced"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/api/formations/[id]/route.ts": {
-    "mtime": 1778535063.0,
-    "ast_hash": "d6922123a95c2fa9077b6a243fd23461",
-    "semantic_hash": "d6922123a95c2fa9077b6a243fd23461"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/api/formations/[id]/pdf/route.ts": {
-    "mtime": 1778535063.0,
+  "app/api/formations/[id]/pdf/route.ts": {
+    "mtime": 1788285058.437823,
+    "seen": 1788377337.0606692,
     "ast_hash": "6666a096ec41b1158b8f245dbae0248a",
     "semantic_hash": "6666a096ec41b1158b8f245dbae0248a"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/api/formations/[id]/deploy/route.ts": {
-    "mtime": 1787480891.4545305,
-    "ast_hash": "ce8d1fdd1db1f774cf430447e234bca2",
-    "semantic_hash": "ce8d1fdd1db1f774cf430447e234bca2"
+  "app/api/formations/[id]/route.ts": {
+    "mtime": 1788285058.437823,
+    "seen": 1788377337.06067,
+    "ast_hash": "d6922123a95c2fa9077b6a243fd23461",
+    "semantic_hash": "d6922123a95c2fa9077b6a243fd23461"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/api/formations/[id]/delete/route.ts": {
-    "mtime": 1787480906.4844465,
-    "ast_hash": "60bbd7b4c10560f7e677d0da096f522c",
-    "semantic_hash": "60bbd7b4c10560f7e677d0da096f522c"
+  "app/api/formations/route.ts": {
+    "mtime": 1788285058.437823,
+    "seen": 1788377337.060671,
+    "ast_hash": "1efe6a7eed2e3d76d01c7708928421aa",
+    "semantic_hash": "1efe6a7eed2e3d76d01c7708928421aa"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/api/users/route.ts": {
-    "mtime": 1778535063.0,
-    "ast_hash": "f781d9cb6b5a13eb66af240b42255ad6",
-    "semantic_hash": "f781d9cb6b5a13eb66af240b42255ad6"
+  "app/api/health/route.ts": {
+    "mtime": 1788376605.135758,
+    "seen": 1788377337.0606723,
+    "ast_hash": "3878b239c5be36d9c17a8fbc308d0db3",
+    "semantic_hash": "3878b239c5be36d9c17a8fbc308d0db3"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/app/api/proxmox/templates/route.ts": {
-    "mtime": 1778535063.0,
+  "app/api/healthz/route.ts": {
+    "mtime": 1788285058.4381502,
+    "seen": 1788377337.0606732,
+    "ast_hash": "e837aeb9e806598f3658e2c973fb5915",
+    "semantic_hash": "e837aeb9e806598f3658e2c973fb5915"
+  },
+  "app/api/proxmox/templates/route.ts": {
+    "mtime": 1788285058.4384708,
+    "seen": 1788377337.0606742,
     "ast_hash": "c7a9f4b6b91e615db11c22b735862472",
     "semantic_hash": "c7a9f4b6b91e615db11c22b735862472"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/types/index.ts": {
-    "mtime": 1787481505.8632638,
-    "ast_hash": "4a74a9355771082605d306b9023f6527",
-    "semantic_hash": "4a74a9355771082605d306b9023f6527"
+  "app/api/scripts/route.ts": {
+    "mtime": 1788285058.4384708,
+    "seen": 1788377337.0606751,
+    "ast_hash": "93cf45591d6a9f024f34d5049538a393",
+    "semantic_hash": "93cf45591d6a9f024f34d5049538a393"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/layout/service-status.tsx": {
-    "mtime": 1787484662.790112,
-    "ast_hash": "134c4dec27310c03b680410f637a5685",
-    "semantic_hash": "134c4dec27310c03b680410f637a5685"
+  "app/api/users/route.ts": {
+    "mtime": 1788381563.7926006,
+    "seen": 1788382130.773979,
+    "ast_hash": "6f96d8aaefca777fdc9a9163b149b388",
+    "semantic_hash": "6f96d8aaefca777fdc9a9163b149b388"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/layout/theme-toggle.tsx": {
-    "mtime": 1787521973.4313731,
-    "ast_hash": "756470f75841cf9deca17bd7ad24c99c",
-    "semantic_hash": "756470f75841cf9deca17bd7ad24c99c"
+  "app/layout.tsx": {
+    "mtime": 1788285058.4384708,
+    "seen": 1788377337.0606773,
+    "ast_hash": "128cdde0abdd7ce6d4c0c288c0694be1",
+    "semantic_hash": "128cdde0abdd7ce6d4c0c288c0694be1"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/layout/top-nav.tsx": {
-    "mtime": 1787523368.8890443,
-    "ast_hash": "ea00b79b25b13385a304bd34bdf98b04",
-    "semantic_hash": "ea00b79b25b13385a304bd34bdf98b04"
+  "app/page.tsx": {
+    "mtime": 1788285058.4384708,
+    "seen": 1788377337.0606785,
+    "ast_hash": "63b0312a14aff5fdd90016276d629702",
+    "semantic_hash": "63b0312a14aff5fdd90016276d629702"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/layout/console-head.tsx": {
-    "mtime": 1787523368.8891456,
-    "ast_hash": "b4bbef0a98493f96c8239f6c12d989b5",
-    "semantic_hash": "b4bbef0a98493f96c8239f6c12d989b5"
+  "app/providers.tsx": {
+    "mtime": 1788285058.4384708,
+    "seen": 1788377337.0606802,
+    "ast_hash": "fe0523a39533b0519600cbb1ec290d8c",
+    "semantic_hash": "fe0523a39533b0519600cbb1ec290d8c"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/button.tsx": {
-    "mtime": 1787521778.2031965,
-    "ast_hash": "1dfc12f0f0f4c6555fcd8ccc7af8c988",
-    "semantic_hash": "1dfc12f0f0f4c6555fcd8ccc7af8c988"
+  "components.json": {
+    "mtime": 1788285058.4384708,
+    "seen": 1788377337.060681,
+    "ast_hash": "63b2c4fcf776fec9dbc76e94ea0d70c6",
+    "semantic_hash": "63b2c4fcf776fec9dbc76e94ea0d70c6"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/card.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "77a10bd948ca424972a28e704a3df604",
-    "semantic_hash": "77a10bd948ca424972a28e704a3df604"
+  "components/formations/creation-form.tsx": {
+    "mtime": 1788376800.1063917,
+    "seen": 1788377337.0606823,
+    "ast_hash": "45b9d62bd8f571494065849f30d44ed3",
+    "semantic_hash": "45b9d62bd8f571494065849f30d44ed3"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/separator.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "3de2dca3e47ab29c4b1f632671545628",
-    "semantic_hash": "3de2dca3e47ab29c4b1f632671545628"
+  "components/formations/delete-confirmation.tsx": {
+    "mtime": 1788285058.4394274,
+    "seen": 1788377337.0606833,
+    "ast_hash": "790ddfacc59f135cb89eb7913eb6339a",
+    "semantic_hash": "790ddfacc59f135cb89eb7913eb6339a"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/alert-dialog.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "4f3e711a6b5df14e88f6fc243b57599b",
-    "semantic_hash": "4f3e711a6b5df14e88f6fc243b57599b"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/dropdown-menu.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "e6107cbb2088437e76a858f75b5a0280",
-    "semantic_hash": "e6107cbb2088437e76a858f75b5a0280"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/input.tsx": {
-    "mtime": 1787522060.183413,
-    "ast_hash": "1868cf3bd627b5dc28ae9a445673ae56",
-    "semantic_hash": "1868cf3bd627b5dc28ae9a445673ae56"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/progress.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "aa71e8ceb68b33af5ed5799f42cd873e",
-    "semantic_hash": "aa71e8ceb68b33af5ed5799f42cd873e"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/tabs.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "429035bc858475cd3bcedbb08a5ba8da",
-    "semantic_hash": "429035bc858475cd3bcedbb08a5ba8da"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/table.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "44f87727e60080863edb00fdd2fcd8da",
-    "semantic_hash": "44f87727e60080863edb00fdd2fcd8da"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/select.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "ab95f478cb74d1906b07425c15b124cc",
-    "semantic_hash": "ab95f478cb74d1906b07425c15b124cc"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/slider.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "1ddc476cffc083f68378a07276c64546",
-    "semantic_hash": "1ddc476cffc083f68378a07276c64546"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/sonner.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "f46214bc2a6a5153a6e04fad523d5587",
-    "semantic_hash": "f46214bc2a6a5153a6e04fad523d5587"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/label.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "a70440da86bfc6a07f15197cca48cb08",
-    "semantic_hash": "a70440da86bfc6a07f15197cca48cb08"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/dialog.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "d9618a63d34473ec512321cc12d43692",
-    "semantic_hash": "d9618a63d34473ec512321cc12d43692"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/ui/badge.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "e4ec840217040d5630ee6ed7213a1d72",
-    "semantic_hash": "e4ec840217040d5630ee6ed7213a1d72"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/formations/deployment-trace.tsx": {
-    "mtime": 1787521907.4658222,
-    "ast_hash": "9d1418ea6b8282f0f0f054b1bcdca29b",
-    "semantic_hash": "9d1418ea6b8282f0f0f054b1bcdca29b"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/formations/template-combobox.tsx": {
-    "mtime": 1787523368.889308,
-    "ast_hash": "24da472366d2ebc571630fadeed601f2",
-    "semantic_hash": "24da472366d2ebc571630fadeed601f2"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/formations/creation-form.tsx": {
-    "mtime": 1787523128.124571,
-    "ast_hash": "694e78c1aed67a3b37b8f18026bc7906",
-    "semantic_hash": "694e78c1aed67a3b37b8f18026bc7906"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/formations/delete-confirmation.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "5c4b3634ffd617af8f091671f99f000c",
-    "semantic_hash": "5c4b3634ffd617af8f091671f99f000c"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/formations/vm-preview-table.tsx": {
-    "mtime": 1778535063.0,
-    "ast_hash": "8ff878b965a7096823635db3defeb006",
-    "semantic_hash": "8ff878b965a7096823635db3defeb006"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/formations/deleting-watcher.tsx": {
-    "mtime": 1778535063.0,
+  "components/formations/deleting-watcher.tsx": {
+    "mtime": 1788285058.4394274,
+    "seen": 1788377337.0606842,
     "ast_hash": "56da8d2705736180429b388bed79d201",
     "semantic_hash": "56da8d2705736180429b388bed79d201"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/formations/status-pill.tsx": {
-    "mtime": 1787521973.4309142,
-    "ast_hash": "81589ff8dbb0b1b2fbeb7bec5a6b794b",
-    "semantic_hash": "81589ff8dbb0b1b2fbeb7bec5a6b794b"
+  "components/formations/deploy-progress.tsx": {
+    "mtime": 1788285058.4394274,
+    "seen": 1788377337.0606854,
+    "ast_hash": "5ac879fc1f852626ad3f79c17f45357d",
+    "semantic_hash": "5ac879fc1f852626ad3f79c17f45357d"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/formations/deploy-progress.tsx": {
-    "mtime": 1787523368.8893828,
-    "ast_hash": "fd29769b916f0358ee7e18d82b68debc",
-    "semantic_hash": "fd29769b916f0358ee7e18d82b68debc"
+  "components/formations/deployment-trace.tsx": {
+    "mtime": 1788285058.4394274,
+    "seen": 1788377337.0606863,
+    "ast_hash": "6a647d9b7516b617023c203c7b1b9a17",
+    "semantic_hash": "6a647d9b7516b617023c203c7b1b9a17"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/formations/fleet-grid.tsx": {
-    "mtime": 1787521867.205631,
-    "ast_hash": "8ad10f05d4d77e1b97d964dd3256bad9",
-    "semantic_hash": "8ad10f05d4d77e1b97d964dd3256bad9"
+  "components/formations/fleet-grid.tsx": {
+    "mtime": 1788375909.953407,
+    "seen": 1788377337.0606873,
+    "ast_hash": "e3f94f011b7fdbbe6b26de434642b78d",
+    "semantic_hash": "e3f94f011b7fdbbe6b26de434642b78d"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/formations/script-picker.tsx": {
-    "mtime": 1787523368.8894634,
-    "ast_hash": "4260c77d7db7bd5bf272fff476e2e90d",
-    "semantic_hash": "4260c77d7db7bd5bf272fff476e2e90d"
+  "components/formations/script-picker.tsx": {
+    "mtime": 1788375910.919647,
+    "seen": 1788377337.0606885,
+    "ast_hash": "390b9306a35c928e23cbd4779aeb766c",
+    "semantic_hash": "390b9306a35c928e23cbd4779aeb766c"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/components/formations/vm-track.tsx": {
-    "mtime": 1787523368.8895495,
-    "ast_hash": "cde682285e9295afce9b8a815e506798",
-    "semantic_hash": "cde682285e9295afce9b8a815e506798"
+  "components/formations/status-pill.tsx": {
+    "mtime": 1788285058.4394274,
+    "seen": 1788377337.0606892,
+    "ast_hash": "6017c674e497f2ea1fedb2b9a56afcd0",
+    "semantic_hash": "6017c674e497f2ea1fedb2b9a56afcd0"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/supabase/migrations/001_initial_schema.sql": {
-    "mtime": 1778535063.0,
-    "ast_hash": "578885989d1e804ebbe1a83eb7da0ad4",
-    "semantic_hash": "578885989d1e804ebbe1a83eb7da0ad4"
+  "components/formations/template-combobox.tsx": {
+    "mtime": 1788285058.4394274,
+    "seen": 1788377337.0606902,
+    "ast_hash": "ad54afb56507bc960a6f99dfaadff70f",
+    "semantic_hash": "ad54afb56507bc960a6f99dfaadff70f"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/supabase/migrations/004_formation_scripts.sql": {
-    "mtime": 1787481357.44923,
-    "ast_hash": "abed09b770908927a357afa7f07872b7",
-    "semantic_hash": "abed09b770908927a357afa7f07872b7"
+  "components/formations/vm-track.tsx": {
+    "mtime": 1788285058.4394274,
+    "seen": 1788377337.060691,
+    "ast_hash": "1d9cea837a3b5068c2ebd47d376b8bb8",
+    "semantic_hash": "1d9cea837a3b5068c2ebd47d376b8bb8"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/supabase/migrations/003_jobs_and_progress.sql": {
-    "mtime": 1787480768.8571038,
-    "ast_hash": "1ba976cd7f2c534b0dbf0cbd45b31c1f",
-    "semantic_hash": "1ba976cd7f2c534b0dbf0cbd45b31c1f"
+  "components/layout/console-head.tsx": {
+    "mtime": 1788285058.4394274,
+    "seen": 1788377337.0606923,
+    "ast_hash": "bd04612897e81fa6276fa6ce4939d1cf",
+    "semantic_hash": "bd04612897e81fa6276fa6ce4939d1cf"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/supabase/migrations/002_enable_rls.sql": {
-    "mtime": 1787479513.5140095,
-    "ast_hash": "1e77b36a8ee0c5feff47e0c97016bcc3",
-    "semantic_hash": "1e77b36a8ee0c5feff47e0c97016bcc3"
+  "components/layout/service-status.tsx": {
+    "mtime": 1788285058.440297,
+    "seen": 1788377337.0606935,
+    "ast_hash": "da8ef170779296190cb02eecabc1fc61",
+    "semantic_hash": "da8ef170779296190cb02eecabc1fc61"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/schemas.ts": {
-    "mtime": 1787481529.504599,
-    "ast_hash": "39d806c0d4f2aaf89791b7a7bb92f0f9",
-    "semantic_hash": "39d806c0d4f2aaf89791b7a7bb92f0f9"
+  "components/layout/theme-toggle.tsx": {
+    "mtime": 1788285058.440297,
+    "seen": 1788377337.0606942,
+    "ast_hash": "30443221d3964ab6e54b231d1c29ac48",
+    "semantic_hash": "30443221d3964ab6e54b231d1c29ac48"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/templates.ts": {
-    "mtime": 1787481593.700593,
-    "ast_hash": "10a0a58246a022f87ab85e160de4dc4f",
-    "semantic_hash": "10a0a58246a022f87ab85e160de4dc4f"
+  "components/layout/top-nav.tsx": {
+    "mtime": 1788285058.440297,
+    "seen": 1788377337.0606954,
+    "ast_hash": "baaa11cfeb6c359a4ee05d53c03d0121",
+    "semantic_hash": "baaa11cfeb6c359a4ee05d53c03d0121"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/cleanup.ts": {
-    "mtime": 1778535063.0,
-    "ast_hash": "881390eea195694af5bd11fec0045b97",
-    "semantic_hash": "881390eea195694af5bd11fec0045b97"
+  "components/ui/button.tsx": {
+    "mtime": 1788285058.440626,
+    "seen": 1788377337.0606964,
+    "ast_hash": "faa7570a3d28dfbda964b660c8336c86",
+    "semantic_hash": "faa7570a3d28dfbda964b660c8336c86"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/utils.ts": {
-    "mtime": 1778535063.0,
-    "ast_hash": "5a6fd53fdcf2be529e9cc0b718fde352",
-    "semantic_hash": "5a6fd53fdcf2be529e9cc0b718fde352"
+  "components/ui/input.tsx": {
+    "mtime": 1788285058.440626,
+    "seen": 1788377337.0606973,
+    "ast_hash": "06923962262920a489b6010793546f96",
+    "semantic_hash": "06923962262920a489b6010793546f96"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/templates.test.ts": {
-    "mtime": 1787481558.4891167,
-    "ast_hash": "5e30c2d99ab375d8d62ee58ba9682723",
-    "semantic_hash": "5e30c2d99ab375d8d62ee58ba9682723"
+  "components/ui/label.tsx": {
+    "mtime": 1788285058.440626,
+    "seen": 1788377337.0606983,
+    "ast_hash": "a70440da86bfc6a07f15197cca48cb08",
+    "semantic_hash": "a70440da86bfc6a07f15197cca48cb08"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/orchestrator.ts": {
-    "mtime": 1787522950.8059485,
-    "ast_hash": "172dcc27a87e43189d392c0d7f1295c1",
-    "semantic_hash": "172dcc27a87e43189d392c0d7f1295c1"
+  "components/ui/slider.tsx": {
+    "mtime": 1788285058.440626,
+    "seen": 1788377337.0606995,
+    "ast_hash": "21ba98d978cb82a4028314499f06cf3d",
+    "semantic_hash": "21ba98d978cb82a4028314499f06cf3d"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/queue.ts": {
-    "mtime": 1787480808.9793723,
-    "ast_hash": "1ad16141ce231a6589d0128936eadbea",
-    "semantic_hash": "1ad16141ce231a6589d0128936eadbea"
+  "components/ui/sonner.tsx": {
+    "mtime": 1788285058.4411502,
+    "seen": 1788377337.0607004,
+    "ast_hash": "f46214bc2a6a5153a6e04fad523d5587",
+    "semantic_hash": "f46214bc2a6a5153a6e04fad523d5587"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/pool.test.ts": {
-    "mtime": 1787481569.4911597,
-    "ast_hash": "c7cc307b442deb72667b9da823f8d12a",
-    "semantic_hash": "c7cc307b442deb72667b9da823f8d12a"
+  "eslint.config.mjs": {
+    "mtime": 1788285058.4411502,
+    "seen": 1788377337.0607018,
+    "ast_hash": "d96bebc952ba5fbfa68932a840b7295d",
+    "semantic_hash": "d96bebc952ba5fbfa68932a840b7295d"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/progress.ts": {
-    "mtime": 1787481456.7633004,
-    "ast_hash": "379c9a7a41da9a3bbb61b755d6d17aed",
-    "semantic_hash": "379c9a7a41da9a3bbb61b755d6d17aed"
+  "instrumentation.ts": {
+    "mtime": 1788337524.1294935,
+    "seen": 1788377337.0607033,
+    "ast_hash": "fee8ccfa89009ad7935356977a48cf6c",
+    "semantic_hash": "fee8ccfa89009ad7935356977a48cf6c"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/crypto.test.ts": {
-    "mtime": 1787479777.267163,
+  "lib/cleanup.ts": {
+    "mtime": 1788376607.7305484,
+    "seen": 1788377337.060704,
+    "ast_hash": "7a4a9aec186d2087ef281ff306d5ce03",
+    "semantic_hash": "7a4a9aec186d2087ef281ff306d5ce03"
+  },
+  "lib/crypto.test.ts": {
+    "mtime": 1788285058.450539,
+    "seen": 1788377337.0607052,
     "ast_hash": "99c8dd02ab66c4dca57f3a6c1c72e894",
     "semantic_hash": "99c8dd02ab66c4dca57f3a6c1c72e894"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/pool.ts": {
-    "mtime": 1787481327.0943162,
-    "ast_hash": "d94452ddea4cf6c699910ab164013197",
-    "semantic_hash": "d94452ddea4cf6c699910ab164013197"
+  "lib/crypto.ts": {
+    "mtime": 1788375799.4625556,
+    "seen": 1788377337.0607061,
+    "ast_hash": "2e80d44050a6271371a22e8f8464b34c",
+    "semantic_hash": "2e80d44050a6271371a22e8f8464b34c"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/crypto.ts": {
-    "mtime": 1787479492.5143206,
-    "ast_hash": "4e1d697fd98ef025e6f632605032b270",
-    "semantic_hash": "4e1d697fd98ef025e6f632605032b270"
+  "lib/hooks/use-deployment-progress.ts": {
+    "mtime": 1788375944.143603,
+    "seen": 1788377337.060707,
+    "ast_hash": "4c60c35c7fcb33bd9feffa2f9ffd30a5",
+    "semantic_hash": "4c60c35c7fcb33bd9feffa2f9ffd30a5"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/supabase/admin.ts": {
-    "mtime": 1778535063.0,
-    "ast_hash": "be9d4c59308befacd0d8e4a2e2fda85b",
-    "semantic_hash": "be9d4c59308befacd0d8e4a2e2fda85b"
+  "lib/job-runner.ts": {
+    "mtime": 1788376614.4333467,
+    "seen": 1788377337.060708,
+    "ast_hash": "91f0104fe68dc4541a1b60b946f0aa33",
+    "semantic_hash": "91f0104fe68dc4541a1b60b946f0aa33"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/supabase/client.ts": {
-    "mtime": 1778535063.0,
-    "ast_hash": "5453d99289cf630306e5030428c0fc33",
-    "semantic_hash": "5453d99289cf630306e5030428c0fc33"
+  "lib/orchestrator.ts": {
+    "mtime": 1788350566.5702271,
+    "seen": 1788377337.0607092,
+    "ast_hash": "70f73cc068d52e1d16de9ce0f2afb24d",
+    "semantic_hash": "70f73cc068d52e1d16de9ce0f2afb24d"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/supabase/server.ts": {
-    "mtime": 1778535063.0,
-    "ast_hash": "c9b562df268388ed7aee4ec07508ceea",
-    "semantic_hash": "c9b562df268388ed7aee4ec07508ceea"
+  "lib/pipeline/configure-vm.ts": {
+    "mtime": 1788376617.9861116,
+    "seen": 1788377337.0607102,
+    "ast_hash": "a8f594934a1abb4cba0dbe4677b641cb",
+    "semantic_hash": "a8f594934a1abb4cba0dbe4677b641cb"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/services/proxmox-agent.ts": {
-    "mtime": 1787523012.5922444,
-    "ast_hash": "14e3fe3035c5abf04f71c565ada1352b",
-    "semantic_hash": "14e3fe3035c5abf04f71c565ada1352b"
+  "lib/pipeline/guacamole-step.ts": {
+    "mtime": 1788285058.4510474,
+    "seen": 1788377337.0607111,
+    "ast_hash": "1fc5b10be8a93ef5192ea29cbe22613d",
+    "semantic_hash": "1fc5b10be8a93ef5192ea29cbe22613d"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/services/proxmox.ts": {
-    "mtime": 1787481519.8463392,
-    "ast_hash": "b893c35d7c4a4345b3305d261d36598b",
-    "semantic_hash": "b893c35d7c4a4345b3305d261d36598b"
+  "lib/pipeline/network-step.ts": {
+    "mtime": 1788350515.741556,
+    "seen": 1788377337.060712,
+    "ast_hash": "a74b4e4a183e6d5ac6935ce35ac2bafd",
+    "semantic_hash": "a74b4e4a183e6d5ac6935ce35ac2bafd"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/services/pdf.ts": {
-    "mtime": 1787484913.2737286,
-    "ast_hash": "7aeb8d9291e6a9a97e95c4807acb2fa8",
-    "semantic_hash": "7aeb8d9291e6a9a97e95c4807acb2fa8"
+  "lib/pool.test.ts": {
+    "mtime": 1788285058.4510474,
+    "seen": 1788377337.0607133,
+    "ast_hash": "c7cc307b442deb72667b9da823f8d12a",
+    "semantic_hash": "c7cc307b442deb72667b9da823f8d12a"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/services/guacamole.ts": {
-    "mtime": 1787479568.0713208,
-    "ast_hash": "272d3ab4236bd679cef66c58d31ad63a",
-    "semantic_hash": "272d3ab4236bd679cef66c58d31ad63a"
+  "lib/pool.ts": {
+    "mtime": 1788285058.4510474,
+    "seen": 1788377337.0607147,
+    "ast_hash": "63cd644c792fb97507d424079d0e5376",
+    "semantic_hash": "63cd644c792fb97507d424079d0e5376"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/services/pfsense.ts": {
-    "mtime": 1778535063.0,
-    "ast_hash": "5a8a66b3c943a8207240dfd081c4a658",
-    "semantic_hash": "5a8a66b3c943a8207240dfd081c4a658"
+  "lib/progress.ts": {
+    "mtime": 1788375791.8035665,
+    "seen": 1788377337.0607157,
+    "ast_hash": "520aabfc570ce9aa9a8e23713227f0bf",
+    "semantic_hash": "520aabfc570ce9aa9a8e23713227f0bf"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/hooks/use-deployment-progress.ts": {
-    "mtime": 1787480925.2900376,
-    "ast_hash": "a25de0191eedc33ccf2b2f4b829360a8",
-    "semantic_hash": "a25de0191eedc33ccf2b2f4b829360a8"
+  "lib/queue.ts": {
+    "mtime": 1788285058.45115,
+    "seen": 1788377337.0607169,
+    "ast_hash": "25b84d8408a2e16047eaee170ea3efd2",
+    "semantic_hash": "25b84d8408a2e16047eaee170ea3efd2"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/scripts/resolve.ts": {
-    "mtime": 1787522994.6679764,
-    "ast_hash": "1ab8de47cc0f4bdbce83aa50d8d9ba8f",
-    "semantic_hash": "1ab8de47cc0f4bdbce83aa50d8d9ba8f"
+  "lib/schemas.ts": {
+    "mtime": 1788350604.0976639,
+    "seen": 1788377337.0607178,
+    "ast_hash": "c9b85e67c3990e14b7bf891ac62182aa",
+    "semantic_hash": "c9b85e67c3990e14b7bf891ac62182aa"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/scripts/escape.ts": {
-    "mtime": 1787479664.892225,
-    "ast_hash": "7116ccaafd3fca4b184bbeafeb9e9fd5",
-    "semantic_hash": "7116ccaafd3fca4b184bbeafeb9e9fd5"
+  "lib/scripts/escape.test.ts": {
+    "mtime": 1788285058.45115,
+    "seen": 1788377337.0607185,
+    "ast_hash": "b2f6617150f88a417c12ebc999122d26",
+    "semantic_hash": "b2f6617150f88a417c12ebc999122d26"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/scripts/library.test.ts": {
-    "mtime": 1787480414.3874965,
-    "ast_hash": "d4440e431d93b0159143e41fca644d6d",
-    "semantic_hash": "d4440e431d93b0159143e41fca644d6d"
+  "lib/scripts/escape.ts": {
+    "mtime": 1788375792.8720322,
+    "seen": 1788377337.06072,
+    "ast_hash": "7dad3b14669032ccf3c443e9612ef574",
+    "semantic_hash": "7dad3b14669032ccf3c443e9612ef574"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/scripts/registry.ts": {
-    "mtime": 1787480350.8810928,
-    "ast_hash": "61bb80d53394dcf0c274f66cfdc760e7",
-    "semantic_hash": "61bb80d53394dcf0c274f66cfdc760e7"
+  "lib/scripts/library.test.ts": {
+    "mtime": 1788285058.4515603,
+    "seen": 1788377337.060721,
+    "ast_hash": "9d3c0832f0c0cf9a96323effa263c369",
+    "semantic_hash": "9d3c0832f0c0cf9a96323effa263c369"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/scripts/escape.test.ts": {
-    "mtime": 1787479767.8186688,
-    "ast_hash": "b502e90fbabf52cd526782e00a5093c2",
-    "semantic_hash": "b502e90fbabf52cd526782e00a5093c2"
+  "lib/scripts/registry.test.ts": {
+    "mtime": 1788356014.391302,
+    "seen": 1788377337.0607216,
+    "ast_hash": "3c80c9f92067cd18e37255918b7ff4be",
+    "semantic_hash": "3c80c9f92067cd18e37255918b7ff4be"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/scripts/registry.test.ts": {
-    "mtime": 1787480338.0240474,
-    "ast_hash": "6465782cbfc201060b93726c5f03175a",
-    "semantic_hash": "6465782cbfc201060b93726c5f03175a"
+  "lib/scripts/registry.ts": {
+    "mtime": 1788375798.8428035,
+    "seen": 1788377337.0607226,
+    "ast_hash": "9e6fb60117c28771911346cfcd676c06",
+    "semantic_hash": "9e6fb60117c28771911346cfcd676c06"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/scripts/resolve.test.ts": {
-    "mtime": 1787482571.008375,
+  "lib/scripts/resolve.test.ts": {
+    "mtime": 1788285058.4515603,
+    "seen": 1788377337.0607238,
     "ast_hash": "15cf1a93c09c6b45b14abd2458c418da",
     "semantic_hash": "15cf1a93c09c6b45b14abd2458c418da"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/pipeline/guacamole-step.ts": {
-    "mtime": 1787522985.743174,
-    "ast_hash": "88d03ebe00c08d2431cdb4fc67b9c8c0",
-    "semantic_hash": "88d03ebe00c08d2431cdb4fc67b9c8c0"
+  "lib/scripts/resolve.ts": {
+    "mtime": 1788285058.4515603,
+    "seen": 1788377337.0607247,
+    "ast_hash": "c61c9e43a411b770726d1e580ee5fd36",
+    "semantic_hash": "c61c9e43a411b770726d1e580ee5fd36"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/lib/pipeline/configure-vm.ts": {
-    "mtime": 1787523196.442827,
-    "ast_hash": "384a460d23b1671ab7d7257f6f05e586",
-    "semantic_hash": "384a460d23b1671ab7d7257f6f05e586"
+  "lib/services/guacamole.ts": {
+    "mtime": 1788285058.4515603,
+    "seen": 1788377337.0607257,
+    "ast_hash": "272d3ab4236bd679cef66c58d31ad63a",
+    "semantic_hash": "272d3ab4236bd679cef66c58d31ad63a"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/worker/index.ts": {
-    "mtime": 1787480880.1580367,
-    "ast_hash": "c6b7bb8d1cf6278e6a1e4ceeec5137d1",
-    "semantic_hash": "c6b7bb8d1cf6278e6a1e4ceeec5137d1"
+  "lib/services/pdf.ts": {
+    "mtime": 1788285058.4520924,
+    "seen": 1788377337.060727,
+    "ast_hash": "6ee8984ea92713662e58a1e2165fb3c9",
+    "semantic_hash": "6ee8984ea92713662e58a1e2165fb3c9"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/tools/probe-agent.ts": {
-    "mtime": 1787479856.1100163,
-    "ast_hash": "1be59537fa18ba1f0b2ff6b4b0deab74",
-    "semantic_hash": "1be59537fa18ba1f0b2ff6b4b0deab74"
+  "lib/services/proxmox-agent.test.ts": {
+    "mtime": 1788376621.5470603,
+    "seen": 1788377337.060728,
+    "ast_hash": "b8a84c6c2f9f2a7eba77e91cae265d1a",
+    "semantic_hash": "b8a84c6c2f9f2a7eba77e91cae265d1a"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/tools/build-worker.mjs": {
-    "mtime": 1787481061.3458765,
-    "ast_hash": "b253f7fbe7a2d4d3b3dae3ed3f9c4fa0",
-    "semantic_hash": "b253f7fbe7a2d4d3b3dae3ed3f9c4fa0"
+  "lib/services/proxmox-agent.ts": {
+    "mtime": 1788376627.2197452,
+    "seen": 1788377337.060729,
+    "ast_hash": "8f412bb5796ba253754af37503716cdb",
+    "semantic_hash": "8f412bb5796ba253754af37503716cdb"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/win11/registry.json": {
-    "mtime": 1787483056.544441,
-    "ast_hash": "1e5ec0902e5f05ac1a0df5ea7c351267",
-    "semantic_hash": "1e5ec0902e5f05ac1a0df5ea7c351267"
+  "lib/services/proxmox-api.ts": {
+    "mtime": 1788375806.9352472,
+    "seen": 1788377337.0607302,
+    "ast_hash": "2f49ae3ccdc8c70b331a67c243dc83fa",
+    "semantic_hash": "2f49ae3ccdc8c70b331a67c243dc83fa"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/win11/choco.ps1": {
-    "mtime": 1787483020.7220793,
-    "ast_hash": "bb3872757c0a4cc0ee8a2b489b360430",
-    "semantic_hash": "bb3872757c0a4cc0ee8a2b489b360430"
+  "lib/services/proxmox.ts": {
+    "mtime": 1788375840.6299415,
+    "seen": 1788377337.0607312,
+    "ast_hash": "5e8c1c5bf5fb10531fc17eba279cc516",
+    "semantic_hash": "5e8c1c5bf5fb10531fc17eba279cc516"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/win11/base.ps1": {
-    "mtime": 1787480303.0900252,
-    "ast_hash": "e0fe75eeac421c5713238f093f746158",
-    "semantic_hash": "e0fe75eeac421c5713238f093f746158"
+  "lib/supabase/admin.ts": {
+    "mtime": 1788285058.45215,
+    "seen": 1788377337.0607321,
+    "ast_hash": "be9d4c59308befacd0d8e4a2e2fda85b",
+    "semantic_hash": "be9d4c59308befacd0d8e4a2e2fda85b"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/win11/git.ps1": {
-    "mtime": 1787483041.8102858,
-    "ast_hash": "3b3bd911c4836a8dea4aa37c3e61d8c6",
-    "semantic_hash": "3b3bd911c4836a8dea4aa37c3e61d8c6"
+  "lib/supabase/client.ts": {
+    "mtime": 1788285058.4524767,
+    "seen": 1788377337.060733,
+    "ast_hash": "5453d99289cf630306e5030428c0fc33",
+    "semantic_hash": "5453d99289cf630306e5030428c0fc33"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/win11/docker.ps1": {
-    "mtime": 1787483041.8112676,
-    "ast_hash": "0a7234e5ee12b76e8d1caa22bf39a9fc",
-    "semantic_hash": "0a7234e5ee12b76e8d1caa22bf39a9fc"
+  "lib/supabase/server.ts": {
+    "mtime": 1788285058.4524767,
+    "seen": 1788377337.0607347,
+    "ast_hash": "1c9b9bb7efd7228114aaced117603596",
+    "semantic_hash": "1c9b9bb7efd7228114aaced117603596"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/debian13/registry.json": {
-    "mtime": 1787483056.5411088,
-    "ast_hash": "2d0809035d86f05b660fa9d6c27cd74a",
-    "semantic_hash": "2d0809035d86f05b660fa9d6c27cd74a"
+  "lib/templates.test.ts": {
+    "mtime": 1788376610.595218,
+    "seen": 1788377337.0607357,
+    "ast_hash": "15867e400bf43b311368e64f4ae8c10c",
+    "semantic_hash": "15867e400bf43b311368e64f4ae8c10c"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/kali/registry.json": {
-    "mtime": 1787483056.5433936,
-    "ast_hash": "e67cbc7ce696913684cd046ec3cb401f",
-    "semantic_hash": "e67cbc7ce696913684cd046ec3cb401f"
+  "lib/templates.ts": {
+    "mtime": 1788285058.4524767,
+    "seen": 1788377337.0607367,
+    "ast_hash": "d572874c72b1d4159c756f5224d408b9",
+    "semantic_hash": "d572874c72b1d4159c756f5224d408b9"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/_shared/apt-docker.sh": {
-    "mtime": 1787482999.578079,
-    "ast_hash": "9e961b5d7ff2e29a6192e82672a0892f",
-    "semantic_hash": "9e961b5d7ff2e29a6192e82672a0892f"
+  "lib/utils.ts": {
+    "mtime": 1788285058.4524767,
+    "seen": 1788377337.0607378,
+    "ast_hash": "5a6fd53fdcf2be529e9cc0b718fde352",
+    "semantic_hash": "5a6fd53fdcf2be529e9cc0b718fde352"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/_shared/apt-ansible.sh": {
-    "mtime": 1787483007.442079,
+  "next.config.ts": {
+    "mtime": 1788285058.4524767,
+    "seen": 1788377337.0607388,
+    "ast_hash": "dccf640189226e8d748ca1699dc17d67",
+    "semantic_hash": "dccf640189226e8d748ca1699dc17d67"
+  },
+  "package.json": {
+    "mtime": 1788376147.4433458,
+    "seen": 1788377337.0607398,
+    "ast_hash": "bc58f46b2be0366e58836c6408b9bfc7",
+    "semantic_hash": "bc58f46b2be0366e58836c6408b9bfc7"
+  },
+  "postcss.config.mjs": {
+    "mtime": 1788285058.45415,
+    "seen": 1788377337.060741,
+    "ast_hash": "239f3ebf717465dc636818a1a619398d",
+    "semantic_hash": "239f3ebf717465dc636818a1a619398d"
+  },
+  "proxy.ts": {
+    "mtime": 1788285058.45415,
+    "seen": 1788377337.060742,
+    "ast_hash": "c7981165c1e7c398c0fedbe0e96b6dbc",
+    "semantic_hash": "c7981165c1e7c398c0fedbe0e96b6dbc"
+  },
+  "scripts/_shared/apt-ansible.sh": {
+    "mtime": 1788285058.4550877,
+    "seen": 1788377337.0607429,
     "ast_hash": "9423353171d962fbe5f3daeee2714e90",
     "semantic_hash": "9423353171d962fbe5f3daeee2714e90"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/_shared/apt-git.sh": {
-    "mtime": 1787482989.0220788,
+  "scripts/_shared/apt-docker.sh": {
+    "mtime": 1788285058.4551523,
+    "seen": 1788377337.060744,
+    "ast_hash": "9e961b5d7ff2e29a6192e82672a0892f",
+    "semantic_hash": "9e961b5d7ff2e29a6192e82672a0892f"
+  },
+  "scripts/_shared/apt-git.sh": {
+    "mtime": 1788285058.4551523,
+    "seen": 1788377337.060745,
     "ast_hash": "94dd8c87140a0653425240ad47ddd30a",
     "semantic_hash": "94dd8c87140a0653425240ad47ddd30a"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/_shared/debian-base.sh": {
-    "mtime": 1787480276.1540248,
+  "scripts/_shared/debian-base.sh": {
+    "mtime": 1788285058.4551523,
+    "seen": 1788377337.060746,
     "ast_hash": "00d75029e4a9098f8aeb8bd3dabc0629",
     "semantic_hash": "00d75029e4a9098f8aeb8bd3dabc0629"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/ubuntu2404/registry.json": {
-    "mtime": 1787483056.542323,
+  "scripts/debian13/registry.json": {
+    "mtime": 1788285058.4551523,
+    "seen": 1788377337.0607483,
+    "ast_hash": "2d0809035d86f05b660fa9d6c27cd74a",
+    "semantic_hash": "2d0809035d86f05b660fa9d6c27cd74a"
+  },
+  "scripts/kali/registry.json": {
+    "mtime": 1788285058.4551523,
+    "seen": 1788377337.0607493,
+    "ast_hash": "e67cbc7ce696913684cd046ec3cb401f",
+    "semantic_hash": "e67cbc7ce696913684cd046ec3cb401f"
+  },
+  "scripts/ubuntu2404/registry.json": {
+    "mtime": 1788285058.4551523,
+    "seen": 1788377337.0607502,
     "ast_hash": "bd80d51505c53f1123e18560c6f6adf8",
     "semantic_hash": "bd80d51505c53f1123e18560c6f6adf8"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/.vscode/mcp.json": {
-    "mtime": 1778535063.0,
-    "ast_hash": "b748b5329d6f874985e5bccf61d2783a",
-    "semantic_hash": "b748b5329d6f874985e5bccf61d2783a"
+  "scripts/win11/choco.ps1": {
+    "mtime": 1788285058.455662,
+    "seen": 1788377337.0607514,
+    "ast_hash": "43aa2f075a40a63332769fa6f4eda1d6",
+    "semantic_hash": "43aa2f075a40a63332769fa6f4eda1d6"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/docker-compose.yml": {
-    "mtime": 1787481116.0900414,
-    "ast_hash": "532f03043e828f392570b178f7afee28",
-    "semantic_hash": "532f03043e828f392570b178f7afee28"
+  "scripts/win11/docker.ps1": {
+    "mtime": 1788285058.455662,
+    "seen": 1788377337.0607526,
+    "ast_hash": "0a7234e5ee12b76e8d1caa22bf39a9fc",
+    "semantic_hash": "0a7234e5ee12b76e8d1caa22bf39a9fc"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/pnpm-workspace.yaml": {
-    "mtime": 1787479829.0400512,
-    "ast_hash": "67dd2d1b0c945aece34a673228cbf77e",
-    "semantic_hash": "67dd2d1b0c945aece34a673228cbf77e"
+  "scripts/win11/git.ps1": {
+    "mtime": 1788285058.455662,
+    "seen": 1788377337.0607536,
+    "ast_hash": "3b3bd911c4836a8dea4aa37c3e61d8c6",
+    "semantic_hash": "3b3bd911c4836a8dea4aa37c3e61d8c6"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/README.md": {
-    "mtime": 1787483123.0700815,
+  "scripts/win11/registry.json": {
+    "mtime": 1788362369.6116567,
+    "seen": 1788377337.0607548,
+    "ast_hash": "e4f7dd4e5e1c4ddac7b8716aafe0166f",
+    "semantic_hash": "e4f7dd4e5e1c4ddac7b8716aafe0166f"
+  },
+  "scripts/win11/sqlserver.ps1": {
+    "mtime": 1788362377.0952454,
+    "seen": 1788377337.0607557,
+    "ast_hash": "aab31a4343843c182ffb684e916b93b1",
+    "semantic_hash": "aab31a4343843c182ffb684e916b93b1"
+  },
+  "scripts/win11/ssms.ps1": {
+    "mtime": 1788285058.455662,
+    "seen": 1788377337.0607567,
+    "ast_hash": "c87bc9f67005de3e97e76080af1a8cf2",
+    "semantic_hash": "c87bc9f67005de3e97e76080af1a8cf2"
+  },
+  "supabase/migrations/001_initial_schema.sql": {
+    "mtime": 1788285058.4560635,
+    "seen": 1788377337.0607579,
+    "ast_hash": "578885989d1e804ebbe1a83eb7da0ad4",
+    "semantic_hash": "578885989d1e804ebbe1a83eb7da0ad4"
+  },
+  "supabase/migrations/002_enable_rls.sql": {
+    "mtime": 1788376673.90089,
+    "seen": 1788377337.0607588,
+    "ast_hash": "4cc30e9d867268d7d8e5dbcc4301c1da",
+    "semantic_hash": "4cc30e9d867268d7d8e5dbcc4301c1da"
+  },
+  "supabase/migrations/003_jobs_and_progress.sql": {
+    "mtime": 1788376673.90364,
+    "seen": 1788377337.0607598,
+    "ast_hash": "bd40f62e8306827c3448371621c138ad",
+    "semantic_hash": "bd40f62e8306827c3448371621c138ad"
+  },
+  "supabase/migrations/004_formation_scripts.sql": {
+    "mtime": 1788376673.905945,
+    "seen": 1788377337.0607607,
+    "ast_hash": "9555cb76fb89f1262e04261a916f80f0",
+    "semantic_hash": "9555cb76fb89f1262e04261a916f80f0"
+  },
+  "supabase/migrations/005_dynamic_dhcp.sql": {
+    "mtime": 1788376673.9082665,
+    "seen": 1788377337.0607622,
+    "ast_hash": "963256fb292d93d8273f6c3477df7c0f",
+    "semantic_hash": "963256fb292d93d8273f6c3477df7c0f"
+  },
+  "tools/probe-agent.ts": {
+    "mtime": 1788285058.4564762,
+    "seen": 1788377337.0607631,
+    "ast_hash": "8526d43f6210b8e3bbe6bb0e4989a3bb",
+    "semantic_hash": "8526d43f6210b8e3bbe6bb0e4989a3bb"
+  },
+  "tsconfig.json": {
+    "mtime": 1788285058.4564762,
+    "seen": 1788377337.060764,
+    "ast_hash": "83170c78d6957a09cfc68c7f1329771d",
+    "semantic_hash": "83170c78d6957a09cfc68c7f1329771d"
+  },
+  "types/index.ts": {
+    "mtime": 1788375902.8294175,
+    "seen": 1788377337.0607653,
+    "ast_hash": "bd55f313bfb53f4032c4f56d5f126518",
+    "semantic_hash": "bd55f313bfb53f4032c4f56d5f126518"
+  },
+  "vitest.config.mts": {
+    "mtime": 1788285058.4564762,
+    "seen": 1788377337.0607662,
+    "ast_hash": "ac7c8d3a7eeb760415bd352d9aa367e1",
+    "semantic_hash": "ac7c8d3a7eeb760415bd352d9aa367e1"
+  },
+  "CLAUDE.md": {
+    "mtime": 1788285058.4351501,
+    "seen": 1788377337.0607672,
+    "ast_hash": "a368c00bbb38b9dbc1c21d780f1d7d86",
+    "semantic_hash": "a368c00bbb38b9dbc1c21d780f1d7d86"
+  },
+  "PLAN.md": {
+    "mtime": 1788285058.4361503,
+    "seen": 1788377337.0607684,
+    "ast_hash": "16a9c8fddc13fd6d1fe1d99d3a904d14",
+    "semantic_hash": "16a9c8fddc13fd6d1fe1d99d3a904d14"
+  },
+  "README.md": {
+    "mtime": 1788285058.4361503,
+    "seen": 1788377337.0607696,
     "ast_hash": "84786942996217321837ee6d972e28a6",
     "semantic_hash": "84786942996217321837ee6d972e28a6"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/scripts/README.md": {
-    "mtime": 1787483146.538082,
+  "docker-compose.yml": {
+    "mtime": 1788376684.4321153,
+    "seen": 1788377337.060774,
+    "ast_hash": "a5bd96482156e7054197100f4c6d80ef",
+    "semantic_hash": "a5bd96482156e7054197100f4c6d80ef"
+  },
+  "pnpm-workspace.yaml": {
+    "mtime": 1788285058.45415,
+    "seen": 1788377337.0607753,
+    "ast_hash": "67dd2d1b0c945aece34a673228cbf77e",
+    "semantic_hash": "67dd2d1b0c945aece34a673228cbf77e"
+  },
+  "scripts/README.md": {
+    "mtime": 1788285058.45479,
+    "seen": 1788377337.0607762,
     "ast_hash": "d4835db0b5714ced75b39c4e3d77fdbb",
     "semantic_hash": "d4835db0b5714ced75b39c4e3d77fdbb"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/public/window.svg": {
-    "mtime": 1778535063.0,
-    "ast_hash": "a2760511c65806022ad20adf74370ff3",
-    "semantic_hash": "a2760511c65806022ad20adf74370ff3"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/public/next.svg": {
-    "mtime": 1778535063.0,
-    "ast_hash": "8e061864f388b47f33a1c3780831193e",
-    "semantic_hash": "8e061864f388b47f33a1c3780831193e"
-  },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/public/file.svg": {
-    "mtime": 1778535063.0,
+  "public/file.svg": {
+    "mtime": 1788285058.45415,
+    "seen": 1788377337.0607772,
     "ast_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71",
     "semantic_hash": "d09f95206c3fa0bb9bd9fefabfd0ea71"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/public/globe.svg": {
-    "mtime": 1778535063.0,
+  "public/globe.svg": {
+    "mtime": 1788285058.45479,
+    "seen": 1788377337.0607781,
     "ast_hash": "2aaafa6a49b6563925fe440891e32717",
     "semantic_hash": "2aaafa6a49b6563925fe440891e32717"
   },
-  "/home/corenthin/Dev/LumiConnect/AutoDeploy/public/vercel.svg": {
-    "mtime": 1778535063.0,
+  "public/next.svg": {
+    "mtime": 1788285058.45479,
+    "seen": 1788377337.0607793,
+    "ast_hash": "8e061864f388b47f33a1c3780831193e",
+    "semantic_hash": "8e061864f388b47f33a1c3780831193e"
+  },
+  "public/vercel.svg": {
+    "mtime": 1788285058.45479,
+    "seen": 1788377337.0607803,
     "ast_hash": "c0af2f507b369b085b35ef4bbe3bcf1e",
     "semantic_hash": "c0af2f507b369b085b35ef4bbe3bcf1e"
+  },
+  "public/window.svg": {
+    "mtime": 1788285058.45479,
+    "seen": 1788377337.0607812,
+    "ast_hash": "a2760511c65806022ad20adf74370ff3",
+    "semantic_hash": "a2760511c65806022ad20adf74370ff3"
   }
 }

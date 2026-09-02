@@ -179,6 +179,3 @@ export function FleetSummary({
     </dl>
   );
 }
-
-export type { Tone };
-export { toneOf };

@@ -1,48 +1,20 @@
 import type { ServiceResult } from "@/types";
 import type { Shell } from "@/lib/scripts/escape";
-
-const PROXMOX_URL = process.env.PROXMOX_URL!;
-const PROXMOX_TOKEN_ID = process.env.PROXMOX_TOKEN_ID!;
-const PROXMOX_TOKEN_SECRET = process.env.PROXMOX_TOKEN_SECRET!;
-const PROXMOX_NODE = process.env.PROXMOX_NODE!;
+import {
+  POLL_INTERVAL_MS as AGENT_POLL_INTERVAL_MS,
+  PROXMOX_NODE,
+  form,
+  pveFetch,
+  sleep,
+} from "@/lib/services/proxmox-api";
 
 const FILE_WRITE_MAX_CHARS = 61440;
-
-const AGENT_POLL_INTERVAL_MS = 2000;
 const TASK_TIMEOUT_MS = 120_000;
-
-const headers = {
-  Authorization: `PVEAPIToken=${PROXMOX_TOKEN_ID}=${PROXMOX_TOKEN_SECRET}`,
-};
-
-async function agentFetch(path: string, options: RequestInit = {}) {
-  const res = await fetch(`${PROXMOX_URL}/api2/json${path}`, {
-    ...options,
-    headers: { ...headers, ...options.headers },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Proxmox ${res.status}: ${text}`);
-  }
-  return res.json();
-}
-
-function form(body: Record<string, string> | URLSearchParams): RequestInit {
-  return {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(body).toString(),
-  };
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 async function waitForTask(upid: string, timeoutMs: number): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const { data } = await agentFetch(
+    const { data } = await pveFetch(
       `/nodes/${PROXMOX_NODE}/tasks/${encodeURIComponent(upid)}/status`
     );
     if (data.status === "stopped") {
@@ -56,10 +28,10 @@ async function waitForTask(upid: string, timeoutMs: number): Promise<void> {
 
 export async function startVm(vmid: number): Promise<ServiceResult> {
   try {
-    const status = await agentFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/status/current`);
+    const status = await pveFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/status/current`);
     if (status.data?.status === "running") return { success: true };
 
-    const res = await agentFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/status/start`, {
+    const res = await pveFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/status/start`, {
       method: "POST",
     });
     await waitForTask(res.data, TASK_TIMEOUT_MS);
@@ -71,7 +43,7 @@ export async function startVm(vmid: number): Promise<ServiceResult> {
 
 export async function rebootVm(vmid: number): Promise<ServiceResult> {
   try {
-    const res = await agentFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/status/reboot`, {
+    const res = await pveFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/status/reboot`, {
       method: "POST",
     });
     await waitForTask(res.data, TASK_TIMEOUT_MS);
@@ -90,7 +62,7 @@ export async function waitForAgent(
 
   while (Date.now() - start < timeoutMs) {
     try {
-      await agentFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/agent/ping`, { method: "POST" });
+      await pveFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/agent/ping`, { method: "POST" });
       return { success: true };
     } catch (e) {
       lastError = (e as Error).message;
@@ -106,21 +78,88 @@ export async function waitForAgent(
   };
 }
 
+export async function getGuestIp(
+  vmid: number,
+  mac: string,
+  timeoutMs: number
+): Promise<ServiceResult<{ ip: string }>> {
+  const start = Date.now();
+  const wanted = mac.toLowerCase();
+  let lastError = "aucune tentative";
+
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const { data } = await pveFetch(
+        `/nodes/${PROXMOX_NODE}/qemu/${vmid}/agent/network-get-interfaces`
+      );
+      const interfaces = (data?.result ?? []) as Array<{
+        "hardware-address"?: string;
+        "ip-addresses"?: Array<{ "ip-address": string; "ip-address-type": string }>;
+      }>;
+
+      const iface = interfaces.find(
+        (i) => (i["hardware-address"] ?? "").toLowerCase() === wanted
+      );
+      const match = iface?.["ip-addresses"]?.find(
+        (addr) =>
+          addr["ip-address-type"] === "ipv4" &&
+          addr["ip-address"] !== "127.0.0.1" &&
+          !addr["ip-address"].startsWith("169.254.")
+      );
+
+      if (match) return { success: true, data: { ip: match["ip-address"] } };
+      lastError = "aucune interface avec adresse IPv4 valide pour l'instant";
+    } catch (e) {
+      lastError = (e as Error).message;
+    }
+    await sleep(AGENT_POLL_INTERVAL_MS);
+  }
+
+  return {
+    success: false,
+    error: `Adresse IP introuvable pour la VM ${vmid} (MAC ${mac}) après ${Math.round(
+      timeoutMs / 1000
+    )} s. Vérifier que le client DHCP a bien obtenu un bail. Dernière erreur : ${lastError}`,
+  };
+}
+
+const WIDE_CHAR_FALLBACK: Record<string, string> = {
+  "—": "-",
+  "–": "-",
+  "‘": "'",
+  "’": "'",
+  "“": '"',
+  "”": '"',
+  "…": "...",
+  "﻿": "",
+};
+
+const COMBINING_MARKS = /[̀-ͯ]/g;
+
+export function sanitizeForAgent(content: string): string {
+  return content.replace(/[Ā-￿]/g, (char) => {
+    if (char in WIDE_CHAR_FALLBACK) return WIDE_CHAR_FALLBACK[char];
+    const folded = char.normalize("NFKD").replace(COMBINING_MARKS, "");
+    return folded.length > 0 && folded.charCodeAt(0) <= 0xff ? folded : "?";
+  });
+}
+
 export async function guestFileWrite(
   vmid: number,
   file: string,
   content: string
 ): Promise<ServiceResult> {
-  if (content.length > FILE_WRITE_MAX_CHARS) {
+  const sanitized = sanitizeForAgent(content);
+  if (sanitized.length > FILE_WRITE_MAX_CHARS) {
     return {
       success: false,
-      error: `Contenu de ${content.length} caractères pour ${file} : la limite Proxmox de agent/file-write est ${FILE_WRITE_MAX_CHARS}`,
+      error: `Contenu de ${sanitized.length} caractères pour ${file} : la limite Proxmox de agent/file-write est ${FILE_WRITE_MAX_CHARS}`,
     };
   }
   try {
-    await agentFetch(
+    await pveFetch(
       `/nodes/${PROXMOX_NODE}/qemu/${vmid}/agent/file-write`,
-      form({ file, content })
+      form({ file, content: sanitized })
     );
     return { success: true };
   } catch (e) {
@@ -128,7 +167,7 @@ export async function guestFileWrite(
   }
 }
 
-export async function guestExec(
+async function guestExec(
   vmid: number,
   command: string[]
 ): Promise<ServiceResult<{ pid: number }>> {
@@ -136,14 +175,14 @@ export async function guestExec(
     const params = new URLSearchParams();
     for (const arg of command) params.append("command", arg);
 
-    const res = await agentFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/agent/exec`, form(params));
+    const res = await pveFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/agent/exec`, form(params));
     return { success: true, data: { pid: res.data.pid } };
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
 }
 
-export interface GuestExecResult {
+interface GuestExecResult {
   exited: boolean;
   exitcode?: number;
   stdout: string;
@@ -151,12 +190,12 @@ export interface GuestExecResult {
   truncated: boolean;
 }
 
-export async function guestExecStatus(
+async function guestExecStatus(
   vmid: number,
   pid: number
 ): Promise<ServiceResult<GuestExecResult>> {
   try {
-    const { data } = await agentFetch(
+    const { data } = await pveFetch(
       `/nodes/${PROXMOX_NODE}/qemu/${vmid}/agent/exec-status?pid=${pid}`
     );
     return {
@@ -206,10 +245,6 @@ function interpreterCommand(shell: Shell, remotePath: string): string[] {
     ];
   }
   return ["/bin/bash", remotePath];
-}
-
-function withPowerShellBom(content: string): string {
-  return content.startsWith("\ufeff") ? content : `\ufeff${content}`;
 }
 
 async function waitForExec(
@@ -270,10 +305,8 @@ export async function runGuestScript(
   options: RunScriptOptions
 ): Promise<ServiceResult<RunScriptOutcome>> {
   const { vmid, shell, remotePath, timeoutMs } = options;
-  const content =
-    shell === "powershell" ? withPowerShellBom(options.content) : options.content;
 
-  const write = await guestFileWrite(vmid, remotePath, content);
+  const write = await guestFileWrite(vmid, remotePath, options.content);
   if (!write.success) return { success: false, error: `écriture ${remotePath} : ${write.error}` };
 
   const exec = await guestExec(vmid, interpreterCommand(shell, remotePath));

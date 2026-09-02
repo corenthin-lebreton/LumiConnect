@@ -139,7 +139,7 @@ export default async function FormationDetailPage({
                     aria-hidden
                   />
                   <span className="w-16 font-mono text-sm font-medium tabular">{vm.vmid}</span>
-                  <span className="w-32 font-mono text-meta tabular">{vm.ip}</span>
+                  <span className="w-32 font-mono text-meta tabular">{vm.ip ?? "-"}</span>
                   <span className="hidden flex-1 truncate font-mono text-micro text-muted-foreground md:block">
                     {vm.mac_address ?? "-"}
                   </span>
@@ -170,13 +170,6 @@ export default async function FormationDetailPage({
                 label: "Clones Proxmox",
                 value: String(vms.filter((v) => v.mac_address).length),
                 sub: `template ${formation.template_vmid}`,
-              },
-              {
-                label: "Baux pfSense",
-                value: String(vms.filter((v) => v.dhcp_lease_id).length),
-                sub: vms[0]?.ip
-                  ? `${vms[0].ip.split(".").slice(0, 3).join(".")}.0/24`
-                  : "-",
               },
               {
                 label: "Connexions RDP",

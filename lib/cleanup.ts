@@ -1,5 +1,4 @@
 import * as proxmox from "@/lib/services/proxmox";
-import * as pfsense from "@/lib/services/pfsense";
 import * as guacamole from "@/lib/services/guacamole";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Formation, FormationVm, ServiceResult } from "@/types";
@@ -11,6 +10,15 @@ function logStep(step: string, target: string, result: ServiceResult, failures: 
     const msg = `${step} target=${target} err=${result.error}`;
     console.error(`[cleanup] ${msg}`);
     failures.push(msg);
+  }
+}
+
+async function settleAll(step: string, tasks: Promise<unknown>[], failures: string[]) {
+  for (const result of await Promise.allSettled(tasks)) {
+    if (result.status === "rejected") {
+      console.error(`[cleanup] ${step} rejected:`, result.reason);
+      failures.push(`${step} rejected: ${(result.reason as Error).message}`);
+    }
   }
 }
 
@@ -41,21 +49,16 @@ export async function deleteFormation(formationId: string) {
   const vmList = (vms ?? []) as FormationVm[];
   console.log(`[cleanup] formation=${f.name} vms=${vmList.length}`);
 
-  const userResults = await Promise.allSettled(
+  await settleAll(
+    "deleteUser",
     vmList
       .filter((vm) => vm.guac_username)
       .map(async (vm) => {
         const r = await guacamole.deleteUser(vm.guac_username!);
         logStep("deleteUser", vm.guac_username!, r, failures);
-        return r;
-      })
+      }),
+    failures
   );
-  userResults.forEach((r) => {
-    if (r.status === "rejected") {
-      console.error(`[cleanup] deleteUser rejected:`, r.reason);
-      failures.push(`deleteUser rejected: ${(r.reason as Error).message}`);
-    }
-  });
 
   let userGroupId = f.guac_user_group;
   if (!userGroupId) {
@@ -101,57 +104,35 @@ export async function deleteFormation(formationId: string) {
     console.log(`[cleanup] no connection group to delete`);
   }
 
-  const leaseIds = vmList.map((vm) => vm.dhcp_lease_id).filter((id): id is string => !!id);
-  if (leaseIds.length > 0) {
-    const bulk = await pfsense.deleteDhcpLeasesBulk(leaseIds);
-    if (bulk.success) {
-      console.log(`[cleanup] DHCP bulk delete OK count=${bulk.data?.deleted.length}`);
-    } else {
-      console.error(`[cleanup] DHCP bulk delete partial:`, bulk.error, bulk.data?.failed);
-      failures.push(`dhcp bulk: ${bulk.error}`);
-    }
-  } else {
-    console.log(`[cleanup] no DHCP leases to delete`);
-  }
-
-  const vmResults = await Promise.allSettled(
+  await settleAll(
+    "deleteVm",
     vmList.map(async (vm) => {
       const r = await proxmox.deleteVm(vm.vmid);
       logStep("deleteVm", String(vm.vmid), r, failures);
-      return r;
-    })
+    }),
+    failures
   );
-  vmResults.forEach((r) => {
-    if (r.status === "rejected") {
-      console.error(`[cleanup] deleteVm rejected:`, r.reason);
-      failures.push(`deleteVm rejected: ${(r.reason as Error).message}`);
-    }
-  });
 
-  if (failures.length > 0) {
-    console.error(`[cleanup] formation=${formationId} completed with ${failures.length} failures:`, failures);
-    await supabase
+  const markCleanupFailed = (message: string) =>
+    supabase
       .from("formations")
       .update({
         status: "cleanup_failed",
-        error_message: failures.join("\n"),
+        error_message: message,
         updated_at: new Date().toISOString(),
       })
       .eq("id", formationId);
+
+  if (failures.length > 0) {
+    console.error(`[cleanup] formation=${formationId} completed with ${failures.length} failures:`, failures);
+    await markCleanupFailed(failures.join("\n"));
     return;
   }
 
   const { error: dbErr } = await supabase.from("formations").delete().eq("id", formationId);
   if (dbErr) {
     console.error(`[cleanup] DB delete FAILED:`, dbErr.message);
-    await supabase
-      .from("formations")
-      .update({
-        status: "cleanup_failed",
-        error_message: `db delete: ${dbErr.message}`,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", formationId);
+    await markCleanupFailed(`db delete: ${dbErr.message}`);
     return;
   }
 

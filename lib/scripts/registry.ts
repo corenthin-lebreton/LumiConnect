@@ -95,12 +95,6 @@ function assertConsistent(osId: string, registry: ScriptRegistry, file: string):
       }
     }
   }
-
-  if (!registry.scripts.some((entry) => entry.mandatory)) {
-    throw new Error(
-      `${file} : aucun script obligatoire. Chaque OS doit exposer un script de base (réseau, hostname, accès distant).`
-    );
-  }
 }
 
 export function resolveScriptPath(registry: ScriptRegistry, entry: ScriptEntry): string {
@@ -127,8 +121,4 @@ export async function loadScriptContent(
   } catch {
     throw new Error(`Script introuvable pour ${registry.os_id}/${entry.id} : ${file}`);
   }
-}
-
-export function findEntry(registry: ScriptRegistry, id: string): ScriptEntry | undefined {
-  return registry.scripts.find((entry) => entry.id === id);
 }

@@ -1,11 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, UserPlus } from "lucide-react";
 import { ConsoleHead, Slab, TableHead } from "@/components/layout/console-head";
+
+async function readError(res: Response, fallback: string) {
+  const body = await res.json().catch(() => null);
+  return typeof body?.error === "string" ? body.error : fallback;
+}
 
 interface User {
   id: string;
@@ -21,7 +27,11 @@ export default function UsersPage() {
 
   async function fetchUsers() {
     const res = await fetch("/api/users");
-    if (res.ok) setUsers(await res.json());
+    if (res.ok) {
+      setUsers(await res.json());
+      return;
+    }
+    toast.error(await readError(res, "Impossible de charger les comptes"));
   }
 
   useEffect(() => {
@@ -40,17 +50,23 @@ export default function UsersPage() {
       setEmail("");
       setPassword("");
       fetchUsers();
+    } else {
+      toast.error(await readError(res, "Échec de la création du compte"));
     }
     setLoading(false);
   }
 
   async function handleDelete(userId: string) {
-    await fetch("/api/users", {
+    const res = await fetch("/api/users", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId }),
     });
-    fetchUsers();
+    if (res.ok) {
+      fetchUsers();
+    } else {
+      toast.error(await readError(res, "Échec de la suppression du compte"));
+    }
   }
 
   return (

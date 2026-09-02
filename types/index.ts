@@ -1,6 +1,5 @@
 export type FormationStatus = "draft" | "deploying" | "deployed" | "failed" | "deleting" | "cleanup_failed";
 export type VmStatus = "pending" | "cloning" | "configuring" | "ready" | "failed";
-export type DeployStep = "clone" | "dhcp" | "guacamole_conn" | "guacamole_user";
 export type StepStatus = "pending" | "running" | "success" | "failed" | "skipped";
 
 export interface Formation {
@@ -11,8 +10,6 @@ export interface Formation {
   template_name: string | null;
   vm_start_id: number;
   vm_end_id: number;
-  base_ip: string;
-  ip_start: number;
   vm_username: string;
   vm_password: string;
   rdp_port: number;
@@ -27,34 +24,17 @@ export interface Formation {
   updated_at: string;
 }
 
-export interface FormationScript {
-  formation_id: string;
-  script_id: string;
-  position: number;
-}
-
 export interface FormationVm {
   id: string;
   formation_id: string;
   vmid: number;
-  ip: string;
+  ip: string | null;
   mac_address: string | null;
   guac_username: string | null;
   guac_password: string | null;
   guac_connection_id: string | null;
-  dhcp_lease_id: string | null;
   status: VmStatus;
   error_message: string | null;
-  created_at: string;
-}
-
-export interface DeploymentLog {
-  id: string;
-  formation_id: string;
-  vm_id: string;
-  step: DeployStep;
-  status: "success" | "failed";
-  message: string | null;
   created_at: string;
 }
 

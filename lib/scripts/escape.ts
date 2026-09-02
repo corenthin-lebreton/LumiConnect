@@ -8,10 +8,6 @@ export function escapeBash(value: string): string {
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-export function escapeFor(shell: Shell, value: string): string {
-  return shell === "powershell" ? escapePowerShell(value) : escapeBash(value);
-}
-
 function assertSingleLine(name: string, value: string): void {
   if (/[\r\n\u2028\u2029]/.test(value)) {
     throw new Error(

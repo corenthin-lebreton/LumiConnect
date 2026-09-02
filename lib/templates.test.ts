@@ -28,10 +28,10 @@ describe("parseTemplateName", () => {
   it("rejette les noms hors nomenclature", () => {
     for (const name of [
       "win11",
-      "tpl-win11-v1", // variante manquante
-      "tpl-win11-pro", // révision manquante
-      "tpl-win11-pro-v", // révision vide
-      "tpl-Win11-pro-v1", // majuscule
+      "tpl-win11-v1",
+      "tpl-win11-pro",
+      "tpl-win11-pro-v",
+      "tpl-Win11-pro-v1",
       "tpl-win11-pro-v1-extra",
       "template-win11-pro-v1",
       "",

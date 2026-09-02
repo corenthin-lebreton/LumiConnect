@@ -4,19 +4,16 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { formationSchema } from "@/lib/schemas";
+import { toast } from "sonner";
+import { formationSchema, type FormationFormData } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { ArrowRight } from "lucide-react";
-import { VmPreviewTable } from "./vm-preview-table";
 import { TemplateCombobox } from "./template-combobox";
 import { ScriptPicker } from "./script-picker";
 import type { ProxmoxTemplate } from "@/types";
-import { z } from "zod";
-
-type FormationFormData = z.output<typeof formationSchema>;
 
 function Section({
   title,
@@ -73,10 +70,8 @@ export function CreationForm() {
       script_ids: [],
       vm_start_id: 200,
       vm_end_id: 210,
-      base_ip: "192.168.143.",
-      ip_start: 100,
       vm_username: "dev",
-      vm_password: "",
+      vm_password: "Formation123",
       rdp_port: 3389,
       cpu_cores: 2,
       ram_mb: 4096,
@@ -103,22 +98,33 @@ export function CreationForm() {
       .then((data) => {
         if (Array.isArray(data)) setTemplates(data);
       })
-      .catch(() => {});
+      .catch(() => toast.error("Impossible de charger les templates Proxmox"));
   }, []);
 
   async function onSubmit(data: FormationFormData) {
     setLoading(true);
-    const res = await fetch("/api/formations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    try {
+      const res = await fetch("/api/formations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
 
-    if (res.ok) {
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        toast.error(
+          typeof body?.error === "string" ? body.error : "Échec de la création de la formation"
+        );
+        return;
+      }
+
       const formation = await res.json();
       router.push(`/formations/${formation.id}`);
+    } catch {
+      toast.error("Échec de la création de la formation");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
@@ -214,30 +220,6 @@ export function CreationForm() {
         </div>
       </Section>
 
-      <Section title="Réseau" description="Adressage IP statique attribué par pfSense.">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <FieldLabel htmlFor="base_ip">Base IP</FieldLabel>
-            <Input
-              id="base_ip"
-              placeholder="10.0.1."
-              {...form.register("base_ip")}
-              className="mt-1.5 font-mono tabular"
-            />
-            <FieldError message={form.formState.errors.base_ip?.message} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="ip_start">IP Start Offset</FieldLabel>
-            <Input
-              id="ip_start"
-              type="number"
-              {...form.register("ip_start", { valueAsNumber: true })}
-              className="mt-1.5 font-mono tabular"
-            />
-          </div>
-        </div>
-      </Section>
-
       <Section title="Accès VM" description="Identifiants RDP injectés dans Guacamole.">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -264,17 +246,6 @@ export function CreationForm() {
           </div>
         </div>
       </Section>
-
-      {watched.vm_start_id > 0 && watched.vm_end_id > 0 && (
-        <Section title="Aperçu" description="Cibles calculées avant déploiement.">
-          <VmPreviewTable
-            vmStartId={watched.vm_start_id}
-            vmEndId={watched.vm_end_id}
-            baseIp={watched.base_ip}
-            ipStart={watched.ip_start}
-          />
-        </Section>
-      )}
 
       <div className="grid gap-x-8 border-t border-line py-7 md:grid-cols-[14rem_1fr]">
         <p className="eyebrow hidden md:block">Validation</p>

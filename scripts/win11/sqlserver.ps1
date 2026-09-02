@@ -1,4 +1,4 @@
-﻿# LumiConnect — SQL Server 2022 Express.
+﻿# LumiConnect — SQL Server 2025 Developer.
 #
 # Le guest agent s'exécute en LocalSystem. Une installation par défaut n'accorde le rôle
 # sysadmin qu'au compte installeur, donc à SYSTEM : le stagiaire ouvrirait SSMS sans pouvoir
@@ -84,12 +84,15 @@ try {
         'IACCEPTSQLSERVERLICENSETERMS="True"'
     )
 
-    Write-Step 'installation, compter une quinzaine de minutes'
-    & $choco install sql-server-express -y --no-progress --limit-output --params "/ConfigurationFile:$ini"
+    # L'édition Developer s'installe depuis un ISO téléchargé (~500 Mo, contre un petit
+    # bootstrapper pour Express) : --skip-virus-check évite l'échec du scan en ligne de
+    # Chocolatey, qui ne gère pas les fichiers de cette taille (recommandation du paquet).
+    Write-Step 'installation, compter une trentaine de minutes'
+    & $choco install sql-server-2025 -y --no-progress --limit-output --skip-virus-check --params "/ConfigurationFile:$ini"
 
     # 3010 = installé, redémarrage demandé. 1116 est déclaré valide par le paquet lui-même.
     if ($LASTEXITCODE -notin @(0, 3010, 1116)) {
-        throw "choco install sql-server-express a terminé avec le code $LASTEXITCODE"
+        throw "choco install sql-server-2025 a terminé avec le code $LASTEXITCODE"
     }
 }
 finally {

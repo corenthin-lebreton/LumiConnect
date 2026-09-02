@@ -8,7 +8,6 @@ export interface StepDefinition {
 
 export const PROVISION_STEPS: StepDefinition[] = [
   { step: "clone", label: "Clone Proxmox" },
-  { step: "dhcp", label: "Bail DHCP pfSense" },
 ];
 
 export interface StepOutcome {
@@ -80,16 +79,6 @@ export async function markStep(
   if (error) {
     console.error(`[progress] écriture ${step} vmid=${vmid} échouée :`, error.message);
   }
-}
-
-export async function markStepForAll(
-  formationId: string,
-  vmids: readonly number[],
-  step: string,
-  status: StepStatus,
-  outcome: StepOutcome = {}
-): Promise<void> {
-  await Promise.all(vmids.map((vmid) => markStep(formationId, vmid, step, status, outcome)));
 }
 
 export async function skipRemaining(formationId: string): Promise<void> {

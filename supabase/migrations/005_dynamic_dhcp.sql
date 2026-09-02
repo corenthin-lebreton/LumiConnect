@@ -1,0 +1,6 @@
+ALTER TABLE formation_vms ALTER COLUMN ip DROP NOT NULL;
+
+ALTER TABLE formation_vms DROP COLUMN IF EXISTS dhcp_lease_id;
+
+ALTER TABLE formations DROP COLUMN IF EXISTS base_ip;
+ALTER TABLE formations DROP COLUMN IF EXISTS ip_start;

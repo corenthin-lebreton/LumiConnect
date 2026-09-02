@@ -128,7 +128,7 @@ export function ScriptPicker({ osId, templateChosen, value, onChange }: Props) {
   return <ScriptManifest registry={state.registry} value={value} onChange={onChange} />;
 }
 
-export function ScriptManifest({
+function ScriptManifest({
   registry,
   value,
   onChange,

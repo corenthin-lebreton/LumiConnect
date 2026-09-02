@@ -33,8 +33,8 @@ describe("loadRegistry", () => {
     }
   });
 
-  it("expose un script de base obligatoire pour chaque OS", async () => {
-    for (const osId of OS_IDS) {
+  it("expose un script de base obligatoire pour chaque OS Linux", async () => {
+    for (const osId of ["debian13", "ubuntu2404", "kali"] as const) {
       const registry = await loadRegistry(osId);
       const base = registry.scripts.find((entry) => entry.id === "base");
       expect(base, `${osId} doit exposer un script « base »`).toBeDefined();
@@ -102,8 +102,8 @@ describe("resolveScriptPath", () => {
 });
 
 describe("loadScriptContent", () => {
-  it("lit le script de base de chaque OS", async () => {
-    for (const osId of OS_IDS) {
+  it("lit le script de base de chaque OS Linux", async () => {
+    for (const osId of ["debian13", "ubuntu2404", "kali"] as const) {
       const registry = await loadRegistry(osId);
       const base = registry.scripts.find((entry) => entry.id === "base")!;
       const content = await loadScriptContent(registry, base);

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { FormationStatus, StepStatus, VmStep } from "@/types";
+import type { FormationStatus, VmStep } from "@/types";
 
 export interface VmProgress {
   vmid: number;
@@ -18,7 +18,7 @@ export interface StepColumn {
 
 const TERMINAL: FormationStatus[] = ["deployed", "failed", "cleanup_failed"];
 
-export function useDeploymentProgress(formationId: string | null, enabled = true) {
+export function useDeploymentProgress(formationId: string | null) {
   const [steps, setSteps] = useState<VmStep[]>([]);
   const [formationStatus, setFormationStatus] = useState<FormationStatus | null>(null);
 
@@ -35,7 +35,7 @@ export function useDeploymentProgress(formationId: string | null, enabled = true
   }, []);
 
   useEffect(() => {
-    if (!formationId || !enabled) return;
+    if (!formationId) return;
 
     const supabase = createClient();
     let cancelled = false;
@@ -91,7 +91,7 @@ export function useDeploymentProgress(formationId: string | null, enabled = true
       cancelled = true;
       void supabase.removeChannel(channel);
     };
-  }, [formationId, enabled, upsert]);
+  }, [formationId, upsert]);
 
   const columns = useMemo<StepColumn[]>(() => {
     const seen = new Map<string, StepColumn>();
@@ -132,10 +132,5 @@ export function useDeploymentProgress(formationId: string | null, enabled = true
     return (settled / steps.length) * 100;
   }, [steps]);
 
-  const statusOf = useCallback(
-    (vm: VmProgress, step: string): StepStatus => vm.steps.get(step)?.status ?? "pending",
-    []
-  );
-
-  return { vms, columns, isComplete, formationStatus, failedVmids, progress, statusOf };
+  return { vms, columns, isComplete, formationStatus, failedVmids, progress };
 }

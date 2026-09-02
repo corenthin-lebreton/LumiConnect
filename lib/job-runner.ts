@@ -5,7 +5,7 @@ import { claimJob, failStaleJobs, heartbeat, markFailed, markSucceeded } from "@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Formation, Job } from "@/types";
 
-const WORKER_ID = `${hostname()}-${process.pid}`;
+const RUNNER_ID = `${hostname()}-${process.pid}`;
 const POLL_INTERVAL_MS = Number(process.env.LC_WORKER_POLL_MS ?? 3000);
 const HEARTBEAT_INTERVAL_MS = Number(process.env.LC_WORKER_HEARTBEAT_MS ?? 30000);
 const STALE_AFTER = process.env.LC_WORKER_STALE_AFTER ?? "00:05:00";
@@ -21,9 +21,10 @@ const REQUIRED_ENV = [
 ];
 
 let shuttingDown = false;
+let started = false;
 
 function log(message: string, ...rest: unknown[]) {
-  console.log(`[worker ${WORKER_ID}] ${message}`, ...rest);
+  console.log(`[jobs ${RUNNER_ID}] ${message}`, ...rest);
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -76,7 +77,7 @@ async function runJob(job: Job): Promise<void> {
     await markSucceeded(job.id);
   } catch (err) {
     const message = String((err as Error)?.stack ?? err);
-    console.error(`[worker ${WORKER_ID}] travail ${job.id} en échec :`, message);
+    console.error(`[jobs ${RUNNER_ID}] travail ${job.id} en échec :`, message);
     await markFormationFailed(job, String((err as Error)?.message ?? err));
     await markFailed(job.id, message);
   } finally {
@@ -88,7 +89,7 @@ async function tick(): Promise<boolean> {
   const reaped = await failStaleJobs(STALE_AFTER);
   if (reaped > 0) log(`${reaped} travail/travaux abandonné(s) marqué(s) en échec`);
 
-  const job = await claimJob(WORKER_ID);
+  const job = await claimJob(RUNNER_ID);
   if (!job) return false;
 
   log(`prise du travail ${job.kind} formation=${job.formation_id} (${job.id})`);
@@ -96,40 +97,40 @@ async function tick(): Promise<boolean> {
   return true;
 }
 
-async function main() {
-  const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
-  if (missing.length > 0) {
-    console.error(`[worker] variables d'environnement manquantes : ${missing.join(", ")}`);
-    process.exit(1);
-  }
-
-  log(`démarré — sondage toutes les ${POLL_INTERVAL_MS} ms`);
-
+async function loop(): Promise<void> {
   while (!shuttingDown) {
     try {
       const didWork = await tick();
       if (!didWork) await sleep(POLL_INTERVAL_MS);
     } catch (err) {
-      console.error("[worker] erreur de boucle :", err);
+      console.error(`[jobs ${RUNNER_ID}] erreur de boucle :`, err);
       await sleep(POLL_INTERVAL_MS);
     }
   }
-
-  log("arrêté");
+  log("arrêtée");
 }
 
-for (const signal of ["SIGINT", "SIGTERM"] as const) {
-  process.on(signal, () => {
-    if (shuttingDown) {
-      log(`${signal} reçu à nouveau — arrêt immédiat`);
-      process.exit(1);
-    }
-    log(`${signal} reçu — arrêt après le travail en cours`);
-    shuttingDown = true;
-  });
-}
+export function startJobLoop(): void {
+  if (started) return;
+  started = true;
 
-main().catch((err) => {
-  console.error("[worker] arrêt sur erreur fatale :", err);
-  process.exit(1);
-});
+  const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
+  if (missing.length > 0) {
+    console.error(
+      `[jobs] variables d'environnement manquantes, boucle non démarrée : ${missing.join(", ")}`
+    );
+    return;
+  }
+
+  log(`démarrée — sondage toutes les ${POLL_INTERVAL_MS} ms`);
+  void loop();
+
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.on(signal, () => {
+      if (!shuttingDown) {
+        log(`${signal} reçu — arrêt de la boucle après le travail en cours`);
+        shuttingDown = true;
+      }
+    });
+  }
+}

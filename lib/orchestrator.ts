@@ -1,5 +1,4 @@
 import * as proxmox from "@/lib/services/proxmox";
-import * as pfsense from "@/lib/services/pfsense";
 import { generatePdf } from "@/lib/services/pdf";
 import { PROVISION_STEPS, initSteps, markStep, skipRemaining } from "@/lib/progress";
 import type { StepDefinition } from "@/lib/progress";
@@ -8,6 +7,7 @@ import { mapWithConcurrency, readConcurrency } from "@/lib/pool";
 import { loadRegistry, type ScriptEntry, type ScriptRegistry } from "@/lib/scripts/registry";
 import { resolveSelection } from "@/lib/scripts/resolve";
 import { CONFIGURE_STEPS, configureVm, scriptSteps } from "@/lib/pipeline/configure-vm";
+import { NETWORK_STEPS, runNetworkStep } from "@/lib/pipeline/network-step";
 import { GUACAMOLE_STEPS, runGuacamoleStep } from "@/lib/pipeline/guacamole-step";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Formation, FormationVm } from "@/types";
@@ -19,9 +19,8 @@ const AGENT_TIMEOUT_MS = Number(process.env.LC_AGENT_TIMEOUT_SEC ?? 600) * 1000;
 interface VmContext {
   vmid: number;
   iteration: number;
-  ip: string;
+  ip: string | null;
   mac?: string;
-  dhcpLeaseId?: string;
   failed: boolean;
   failedStep?: string;
 }
@@ -61,7 +60,7 @@ export async function deployFormation(formation: Formation) {
   const vmContexts: VmContext[] = vmids.map((vmid, i) => ({
     vmid,
     iteration: i + 1,
-    ip: `${formation.base_ip}${formation.ip_start + i}`,
+    ip: null,
     failed: false,
   }));
 
@@ -79,6 +78,7 @@ export async function deployFormation(formation: Formation) {
   const steps: StepDefinition[] = [
     ...PROVISION_STEPS,
     ...(selection ? [...CONFIGURE_STEPS, ...scriptSteps(selection.entries)] : []),
+    ...NETWORK_STEPS,
     ...GUACAMOLE_STEPS,
   ];
 
@@ -120,34 +120,6 @@ export async function deployFormation(formation: Formation) {
     await updateVm(vm.vmid, { status: "cloning", mac_address: vm.mac });
   });
 
-  for (const vm of vmContexts.filter((v) => !v.failed)) {
-    await markStep(formation.id, vm.vmid, "dhcp", "running");
-    const result = await pfsense.createDhcpLease(
-      vm.mac!,
-      vm.ip,
-      `${formation.name}-${vm.vmid}`
-    );
-
-    if (!result.success) {
-      await failVm(vm, "dhcp", result.error ?? "bail DHCP échoué");
-      continue;
-    }
-
-    vm.dhcpLeaseId = result.data?.id;
-    await markStep(formation.id, vm.vmid, "dhcp", "success");
-    const { error } = await updateVm(vm.vmid, { dhcp_lease_id: vm.dhcpLeaseId });
-    if (error) {
-      console.error(`[deploy] écriture de dhcp_lease_id échouée vmid=${vm.vmid} :`, error.message);
-    }
-  }
-
-  const applyResult = await pfsense.applyDhcpChanges();
-  if (!applyResult.success) {
-    for (const vm of vmContexts.filter((v) => !v.failed)) {
-      await failVm(vm, "dhcp", `application des réservations DHCP : ${applyResult.error}`);
-    }
-  }
-
   const vmPassword = decryptSecret(formation.vm_password);
 
   if (selection) {
@@ -161,7 +133,7 @@ export async function deployFormation(formation: Formation) {
           formationId: formation.id,
           vmid: vm.vmid,
           hostname: `${formation.name}-${vm.vmid}`,
-          ip: vm.ip,
+          ip: vm.ip ?? "",
           username: formation.vm_username,
           password: vmPassword,
           registry: selection.registry,
@@ -179,9 +151,25 @@ export async function deployFormation(formation: Formation) {
     );
   }
 
+  const networkResult = await runNetworkStep(
+    formation,
+    vmContexts.filter((v) => !v.failed).map((vm) => ({ vmid: vm.vmid, mac: vm.mac! })),
+    AGENT_TIMEOUT_MS
+  );
+  for (const vm of vmContexts) {
+    if (networkResult.failed.has(vm.vmid)) {
+      vm.failed = true;
+      vm.failedStep = vm.failedStep ?? "network";
+    }
+    const ip = networkResult.ips.get(vm.vmid);
+    if (ip) vm.ip = ip;
+  }
+
   const guacFailed = await runGuacamoleStep(
     formation,
-    vmContexts.filter((v) => !v.failed),
+    vmContexts
+      .filter((v) => !v.failed && v.ip !== null)
+      .map((v) => ({ vmid: v.vmid, iteration: v.iteration, ip: v.ip as string })),
     vmPassword
   );
   for (const vm of vmContexts) {
