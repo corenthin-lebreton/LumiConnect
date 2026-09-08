@@ -100,6 +100,23 @@ par un client. Depuis le tableau de bord Supabase, éditer le premier compte et 
 `createAdminClient().auth.admin.updateUserById(id, { app_metadata: { role: "admin" } })` dans un
 script ponctuel.
 
+## Déroulé d'un déploiement
+
+```
+template de base (tag lc-tpl)
+  └─ image dorée : clone complet → démarrage → scripts d'installation → arrêt → template
+       └─ N clones liés → démarrage → identité (scripts per_vm) → redémarrage → IP → Guacamole
+```
+
+Les scripts d'installation ne s'exécutent qu'une fois, sur l'image dorée. Chaque VM de la
+formation est un clone lié de cette image et ne rejoue que les scripts `per_vm` (identité
+machine sous Linux : machine-id, clés SSH, hostname). Un échec d'installation arrête la
+formation avant qu'une seule VM soit créée. L'image dorée est supprimée avec la formation.
+
+Coût disque : le template de base, une copie complète par formation (l'image dorée), puis un
+delta par VM. `LC_CLONE_CONCURRENCY` (défaut 1) et `LC_CONFIGURE_CONCURRENCY` (défaut 4)
+règlent respectivement le rythme des clones et le nombre de VMs configurées en parallèle.
+
 ## Vérifier la chaîne guest agent
 
 Avant tout déploiement réel, valider le socle sur une VM.

@@ -49,7 +49,7 @@ export function DeleteConfirmation({
       </div>
 
       <ul className="space-y-2 border-b border-line px-5 py-4 text-sm">
-        <Item>{vmCount} VM(s) sur Proxmox</Item>
+        <Item>{vmCount} VM(s) sur Proxmox, plus l&apos;image dorée (template)</Item>
         <Item>{vmCount} bail(s) DHCP sur pfSense</Item>
         <Item>{vmCount} connexion(s) et utilisateur(s) Guacamole</Item>
         <Item>Toutes les données en base</Item>

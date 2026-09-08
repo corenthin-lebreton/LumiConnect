@@ -18,6 +18,7 @@ const scriptEntrySchema = z.object({
   requires: z.array(z.string()).default([]),
   timeout_sec: z.number().int().positive().max(7200).default(900),
   reboot_after: z.boolean().default(false),
+  per_vm: z.boolean().default(false),
   file: z.string().optional(),
 });
 
@@ -93,6 +94,20 @@ function assertConsistent(osId: string, registry: ScriptRegistry, file: string):
       }
       if (dependency === entry.id) {
         throw new Error(`${file} : « ${entry.id} » se requiert lui-même`);
+      }
+    }
+  }
+
+  // Un script per_vm tourne sur chaque clone, après que l'image dorée a été figée : une
+  // dépendance vers un script de la dorée serait satisfaite, mais l'inverse jamais.
+  const byId = new Map(registry.scripts.map((entry) => [entry.id, entry]));
+  for (const entry of registry.scripts) {
+    if (entry.per_vm) continue;
+    for (const dependency of entry.requires) {
+      if (byId.get(dependency)?.per_vm) {
+        throw new Error(
+          `${file} : « ${entry.id} » (image dorée) requiert « ${dependency} », qui est per_vm et ne s'exécute qu'après`
+        );
       }
     }
   }

@@ -116,6 +116,13 @@ export async function deleteFormation(formationId: string) {
     failures
   );
 
+  // L'image dorée est la base des clones liés : Proxmox refuse de la supprimer tant qu'un
+  // clone existe, d'où son passage en dernier.
+  if (f.golden_vmid) {
+    const r = await proxmox.deleteVm(infra.proxmox, f.golden_vmid);
+    logStep("deleteGolden", String(f.golden_vmid), r, failures);
+  }
+
   const markCleanupFailed = (message: string) =>
     supabase
       .from("formations")

@@ -2,6 +2,11 @@
 
 Ce que LumiConnect exécute à l'intérieur des VMs après leur démarrage. Un script, un outil.
 
+Les scripts s'exécutent une seule fois, sur l'**image dorée** de la formation (clone complet du
+template, configuré puis converti en template). Les VMs de la formation sont des clones liés de
+cette image : elles ne rejouent que les scripts marqués `per_vm`, qui posent l'identité de la
+machine.
+
 ```
 scripts/
   windows/registry.json     déclaration des scripts proposés pour Windows (PowerShell)
@@ -42,6 +47,7 @@ Linux, c'est un mot-clé de plus dans cette liste, et les scripts `linux/` doive
 | `requires` | Cocher ce script coche aussi ses dépendances, et l'ordre d'exécution en découle. |
 | `timeout_sec` | Plafond. Au-delà, l'étape échoue et le processus reste en cours dans la VM. |
 | `reboot_after` | Redémarre la VM puis attend le retour du guest agent avant la suite. |
+| `per_vm` | Exécuté sur chaque VM clonée, après clonage, au lieu de l'image dorée. Réservé à l'identité machine (machine-id, clés SSH, hostname). Un script de la dorée ne peut pas en dépendre. |
 | `file` | Chemin relatif au dossier de l'OS. Toute résolution sortant de `scripts/` est refusée. |
 
 ## Écrire un script

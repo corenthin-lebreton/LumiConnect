@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptSecret, generatePassword } from "@/lib/crypto";
 import { markStep } from "@/lib/progress";
 import type { StepDefinition } from "@/lib/progress";
-import type { Formation, GuacamoleConfig } from "@/types";
+import type { Formation, GuacamoleConfig, ServiceResult } from "@/types";
 
 export const GUACAMOLE_STEPS: StepDefinition[] = [
   { step: "guacamole_conn", label: "Connexion Guacamole" },
@@ -19,6 +19,17 @@ export interface GuacamoleVm {
   ip: string;
 }
 
+export interface GuacamoleGroups {
+  connectionGroupId: string;
+  userGroupName: string;
+}
+
+export interface GuacamoleCredentials {
+  guac_username: string;
+  guac_password: string;
+  guac_connection_id: string;
+}
+
 function slugify(value: string): string {
   return value
     .normalize("NFD")
@@ -28,126 +39,103 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export async function runGuacamoleStep(
+// Créés une fois par formation, avant les VMs. Les identifiants sont persistés même en cas
+// d'échec partiel pour que le nettoyage retrouve ce qui a été créé.
+export async function createGuacamoleGroups(
   guac: GuacamoleConfig,
-  formation: Formation,
-  vms: readonly GuacamoleVm[],
-  vmPassword: string
-): Promise<Set<number>> {
-  const failed = new Set<number>();
-  if (vms.length === 0) return failed;
-
-  const supabase = createAdminClient();
-
-  const updateVm = (vmid: number, patch: Record<string, unknown>) =>
-    supabase
-      .from("formation_vms")
-      .update(patch)
-      .eq("formation_id", formation.id)
-      .eq("vmid", vmid);
-
-  const markVmFailed = async (
-    vmid: number,
-    step: string,
-    error: string,
-    patch: Record<string, unknown> = {}
-  ) => {
-    failed.add(vmid);
-    console.error(`[guacamole] ${step} échouée vmid=${vmid} :`, error);
-    await markStep(formation.id, vmid, step, "failed", { message: error });
-    await updateVm(vmid, { status: "failed", error_message: error, ...patch });
-  };
-
+  formation: Formation
+): Promise<ServiceResult<GuacamoleGroups>> {
   const groupResult = await guacamole.createConnectionGroup(guac, `${formation.name}_connections`);
   const userGroupResult = await guacamole.createUserGroup(guac, `${formation.name}_users`);
 
-  if (!groupResult.success || !userGroupResult.success) {
-    const error = groupResult.error ?? userGroupResult.error ?? "création des groupes échouée";
-    console.error(`[guacamole] création des groupes échouée, étape abandonnée :`, error);
-
-    for (const vm of vms) {
-      failed.add(vm.vmid);
-      await markStep(formation.id, vm.vmid, CONN_STEP, "failed", { message: error });
-      await updateVm(vm.vmid, { status: "failed", error_message: `Guacamole : ${error}` });
-    }
-
-    await supabase
-      .from("formations")
-      .update({
-        guac_connection_group_id: groupResult.data?.identifier ?? null,
-        guac_user_group: userGroupResult.data?.identifier ?? null,
-      })
-      .eq("id", formation.id);
-
-    return failed;
-  }
-
-  const groupId = groupResult.data!.identifier;
-  const userGroupName = userGroupResult.data!.identifier;
-
+  const supabase = createAdminClient();
   await supabase
     .from("formations")
-    .update({ guac_connection_group_id: groupId, guac_user_group: userGroupName })
+    .update({
+      guac_connection_group_id: groupResult.data?.identifier ?? null,
+      guac_user_group: userGroupResult.data?.identifier ?? null,
+    })
     .eq("id", formation.id);
 
-  for (const vm of vms) {
-    await markStep(formation.id, vm.vmid, CONN_STEP, "running");
-    const connection = await guacamole.createRdpConnection(
-      guac,
-      `${formation.name}-${vm.vmid}`,
-      vm.ip,
-      formation.rdp_port,
-      formation.vm_username,
-      vmPassword,
-      groupId
-    );
-
-    if (!connection.success) {
-      await markVmFailed(vm.vmid, CONN_STEP, connection.error!);
-      continue;
-    }
-    const connectionId = connection.data!.identifier;
-    await markStep(formation.id, vm.vmid, CONN_STEP, "success");
-
-    await markStep(formation.id, vm.vmid, USER_STEP, "running");
-    const username = `${slugify(formation.name)}-${vm.iteration}`;
-    const password = generatePassword();
-    const encrypted = encryptSecret(password);
-
-    const created = await guacamole.createUser(guac, username, password, formation.name);
-    if (!created.success) {
-      await markVmFailed(vm.vmid, USER_STEP, created.error!, {
-        guac_connection_id: connectionId,
-      });
-      continue;
-    }
-
-    const credentials = {
-      guac_username: username,
-      guac_password: encrypted,
-      guac_connection_id: connectionId,
+  if (!groupResult.success || !userGroupResult.success) {
+    return {
+      success: false,
+      error: groupResult.error ?? userGroupResult.error ?? "création des groupes échouée",
     };
-
-    const grouped = await guacamole.addUserToGroup(guac, username, userGroupName);
-    if (!grouped.success) {
-      await markVmFailed(vm.vmid, USER_STEP, `addUserToGroup : ${grouped.error}`, credentials);
-      continue;
-    }
-
-    const permitted = await guacamole.assignConnectionPermission(guac, username, connectionId, groupId);
-    if (!permitted.success) {
-      await markVmFailed(
-        vm.vmid,
-        USER_STEP,
-        `assignConnectionPermission : ${permitted.error}`,
-        credentials
-      );
-      continue;
-    }
-
-    await markStep(formation.id, vm.vmid, USER_STEP, "success");
-    await updateVm(vm.vmid, { status: "ready", ...credentials });
   }
 
-  return failed;
+  return {
+    success: true,
+    data: {
+      connectionGroupId: groupResult.data!.identifier,
+      userGroupName: userGroupResult.data!.identifier,
+    },
+  };
+}
+
+export type GuacamoleVmResult =
+  | { ok: true; credentials: GuacamoleCredentials }
+  | { ok: false; step: string; error: string; credentials: Partial<GuacamoleCredentials> };
+
+export async function provisionGuacamoleVm(
+  guac: GuacamoleConfig,
+  formation: Formation,
+  groups: GuacamoleGroups,
+  vm: GuacamoleVm,
+  vmPassword: string
+): Promise<GuacamoleVmResult> {
+  const { id: formationId } = formation;
+
+  const fail = async (
+    step: string,
+    error: string,
+    credentials: Partial<GuacamoleCredentials> = {}
+  ): Promise<GuacamoleVmResult> => {
+    await markStep(formationId, vm.vmid, step, "failed", { message: error });
+    return { ok: false, step, error, credentials };
+  };
+
+  await markStep(formationId, vm.vmid, CONN_STEP, "running");
+  const connection = await guacamole.createRdpConnection(
+    guac,
+    `${formation.name}-${vm.vmid}`,
+    vm.ip,
+    formation.rdp_port,
+    formation.vm_username,
+    vmPassword,
+    groups.connectionGroupId
+  );
+  if (!connection.success) return fail(CONN_STEP, connection.error!);
+  const connectionId = connection.data!.identifier;
+  await markStep(formationId, vm.vmid, CONN_STEP, "success");
+
+  await markStep(formationId, vm.vmid, USER_STEP, "running");
+  const username = `${slugify(formation.name)}-${vm.iteration}`;
+  const password = generatePassword();
+  const credentials: GuacamoleCredentials = {
+    guac_username: username,
+    guac_password: encryptSecret(password),
+    guac_connection_id: connectionId,
+  };
+
+  const created = await guacamole.createUser(guac, username, password, formation.name);
+  if (!created.success) {
+    return fail(USER_STEP, created.error!, { guac_connection_id: connectionId });
+  }
+
+  const grouped = await guacamole.addUserToGroup(guac, username, groups.userGroupName);
+  if (!grouped.success) return fail(USER_STEP, `addUserToGroup : ${grouped.error}`, credentials);
+
+  const permitted = await guacamole.assignConnectionPermission(
+    guac,
+    username,
+    connectionId,
+    groups.connectionGroupId
+  );
+  if (!permitted.success) {
+    return fail(USER_STEP, `assignConnectionPermission : ${permitted.error}`, credentials);
+  }
+
+  await markStep(formationId, vm.vmid, USER_STEP, "success");
+  return { ok: true, credentials };
 }

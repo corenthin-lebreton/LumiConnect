@@ -22,7 +22,7 @@ function barTone(isComplete: boolean, failed: boolean): string {
 export function DeployProgress({ formationId }: { formationId: string }) {
   const triggered = useRef(false);
   const [focused, setFocused] = useState<number | null>(null);
-  const { vms, columns, isComplete, formationStatus, failedVmids, progress } =
+  const { vms, columns, golden, goldenColumns, isComplete, formationStatus, failedVmids, progress } =
     useDeploymentProgress(formationId);
 
   useEffect(() => {
@@ -96,6 +96,24 @@ export function DeployProgress({ formationId }: { formationId: string }) {
         )}
       </section>
 
+      {golden && (
+        <section className="space-y-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="display text-base">Image dorée</h2>
+            <p className="text-micro text-muted-foreground">
+              Installée une fois, puis clonée pour chaque machine
+            </p>
+          </div>
+          {goldenColumns.length > 0 && <PipelineLegend columns={goldenColumns} vms={[golden]} />}
+          <VmTrackList
+            vms={[golden]}
+            columns={goldenColumns}
+            emptyMessage="Aucune étape enregistrée."
+            rowLabel={() => `Image dorée, VMID ${golden.vmid}`}
+          />
+        </section>
+      )}
+
       {vms.length > 0 ? (
         <section className="space-y-3">
           <div className="flex items-baseline justify-between gap-3">
@@ -107,11 +125,13 @@ export function DeployProgress({ formationId }: { formationId: string }) {
           <FleetGrid vms={vms} columns={columns} selected={focused} onSelect={setFocused} />
         </section>
       ) : (
-        <section className="rounded-lg border border-dashed border-line-strong px-6 py-14 text-center">
-          <p className="text-sm text-muted-foreground">
-            En attente de la prise en charge par le worker.
-          </p>
-        </section>
+        !golden && (
+          <section className="rounded-lg border border-dashed border-line-strong px-6 py-14 text-center">
+            <p className="text-sm text-muted-foreground">
+              En attente de la prise en charge par le worker.
+            </p>
+          </section>
+        )
       )}
 
       {columns.length > 0 && (

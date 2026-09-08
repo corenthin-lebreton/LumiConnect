@@ -1,55 +1,36 @@
 import { rebootVm, waitForAgent } from "@/lib/services/proxmox-agent";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { markStep } from "@/lib/progress";
 import type { StepDefinition } from "@/lib/progress";
-import { mapWithConcurrency, readConcurrency } from "@/lib/pool";
-import type { ScriptEntry } from "@/lib/scripts/registry";
-import type { Formation, ProxmoxConfig } from "@/types";
+import type { ProxmoxConfig } from "@/types";
 
 const REBOOT_STEP = "reboot";
 
 export const REBOOT_STEPS: StepDefinition[] = [{ step: REBOOT_STEP, label: "Redémarrage" }];
 
-const REBOOT_CONCURRENCY = readConcurrency(process.env.LC_CONFIGURE_CONCURRENCY, 4);
-
-export function needsReboot(entries: readonly ScriptEntry[]): boolean {
-  const last = entries.at(-1);
-  return last !== undefined && !last.reboot_after;
-}
-
-export async function runRebootStep(
+// Après les scripts d'identité (machine-id, hostname), le client DHCP doit repartir avec la
+// nouvelle identité : un redémarrage complet est le seul moyen fiable sur toutes les distributions.
+export async function rebootAndWait(
   proxmox: ProxmoxConfig,
-  formation: Formation,
-  vmids: readonly number[],
+  formationId: string,
+  vmid: number,
   agentTimeoutMs: number
-): Promise<Set<number>> {
-  const failed = new Set<number>();
-  if (vmids.length === 0) return failed;
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await markStep(formationId, vmid, REBOOT_STEP, "running");
 
-  const supabase = createAdminClient();
+  const rebooted = await rebootVm(proxmox, vmid);
+  if (!rebooted.success) {
+    const error = `redémarrage : ${rebooted.error}`;
+    await markStep(formationId, vmid, REBOOT_STEP, "failed", { message: error });
+    return { ok: false, error };
+  }
 
-  const markVmFailed = async (vmid: number, error: string) => {
-    failed.add(vmid);
-    console.error(`[reboot] échec vmid=${vmid} :`, error);
-    await markStep(formation.id, vmid, REBOOT_STEP, "failed", { message: error });
-    await supabase
-      .from("formation_vms")
-      .update({ status: "failed", error_message: error })
-      .eq("formation_id", formation.id)
-      .eq("vmid", vmid);
-  };
+  const backUp = await waitForAgent(proxmox, vmid, agentTimeoutMs);
+  if (!backUp.success) {
+    const error = `guest agent après redémarrage : ${backUp.error}`;
+    await markStep(formationId, vmid, REBOOT_STEP, "failed", { message: error });
+    return { ok: false, error };
+  }
 
-  await mapWithConcurrency(vmids, REBOOT_CONCURRENCY, async (vmid) => {
-    await markStep(formation.id, vmid, REBOOT_STEP, "running");
-
-    const rebooted = await rebootVm(proxmox, vmid);
-    if (!rebooted.success) return markVmFailed(vmid, `redémarrage : ${rebooted.error}`);
-
-    const backUp = await waitForAgent(proxmox, vmid, agentTimeoutMs);
-    if (!backUp.success) return markVmFailed(vmid, `guest agent après redémarrage : ${backUp.error}`);
-
-    await markStep(formation.id, vmid, REBOOT_STEP, "success");
-  });
-
-  return failed;
+  await markStep(formationId, vmid, REBOOT_STEP, "success");
+  return { ok: true };
 }

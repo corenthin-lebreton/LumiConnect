@@ -18,9 +18,39 @@ export interface StepColumn {
 
 const TERMINAL: FormationStatus[] = ["deployed", "failed", "cleanup_failed"];
 
+function buildColumns(steps: readonly VmStep[]): StepColumn[] {
+  const seen = new Map<string, StepColumn>();
+  for (const step of steps) {
+    if (!seen.has(step.step)) {
+      seen.set(step.step, { step: step.step, label: step.label, position: step.position });
+    }
+  }
+  return [...seen.values()].sort((a, b) => a.position - b.position);
+}
+
+function groupByVm(steps: readonly VmStep[]): VmProgress[] {
+  const byVmid = new Map<number, VmProgress>();
+  for (const step of steps) {
+    let entry = byVmid.get(step.vmid);
+    if (!entry) {
+      entry = { vmid: step.vmid, steps: new Map() };
+      byVmid.set(step.vmid, entry);
+    }
+    entry.steps.set(step.step, step);
+    if (step.status === "failed" && step.message) entry.error = step.message;
+  }
+  return [...byVmid.values()].sort((a, b) => a.vmid - b.vmid);
+}
+
+interface FormationRow {
+  status: FormationStatus;
+  golden_vmid: number | null;
+}
+
 export function useDeploymentProgress(formationId: string | null) {
   const [steps, setSteps] = useState<VmStep[]>([]);
   const [formationStatus, setFormationStatus] = useState<FormationStatus | null>(null);
+  const [goldenVmid, setGoldenVmid] = useState<number | null>(null);
 
   const upsert = useCallback((incoming: VmStep) => {
     setSteps((previous) => {
@@ -48,13 +78,15 @@ export function useDeploymentProgress(formationId: string | null) {
           .eq("formation_id", formationId)
           .order("vmid")
           .order("position"),
-        supabase.from("formations").select("status").eq("id", formationId).single(),
+        supabase.from("formations").select("status, golden_vmid").eq("id", formationId).single(),
       ]);
 
       if (cancelled) return;
       if (stepsResult.data) setSteps(stepsResult.data as VmStep[]);
       if (formationResult.data) {
-        setFormationStatus(formationResult.data.status as FormationStatus);
+        const row = formationResult.data as FormationRow;
+        setFormationStatus(row.status);
+        setGoldenVmid(row.golden_vmid);
       }
     })();
 
@@ -82,7 +114,9 @@ export function useDeploymentProgress(formationId: string | null) {
           filter: `id=eq.${formationId}`,
         },
         (payload) => {
-          setFormationStatus((payload.new as { status: FormationStatus }).status);
+          const row = payload.new as FormationRow;
+          setFormationStatus(row.status);
+          setGoldenVmid(row.golden_vmid ?? null);
         }
       )
       .subscribe();
@@ -93,29 +127,21 @@ export function useDeploymentProgress(formationId: string | null) {
     };
   }, [formationId, upsert]);
 
-  const columns = useMemo<StepColumn[]>(() => {
-    const seen = new Map<string, StepColumn>();
-    for (const step of steps) {
-      if (!seen.has(step.step)) {
-        seen.set(step.step, { step: step.step, label: step.label, position: step.position });
-      }
-    }
-    return [...seen.values()].sort((a, b) => a.position - b.position);
-  }, [steps]);
+  // L'image dorée a son propre pipeline (clone complet, installation, arrêt, template) :
+  // ses étapes ne doivent pas devenir des colonnes vides sur les pistes des VMs.
+  const vmSteps = useMemo(
+    () => (goldenVmid === null ? steps : steps.filter((s) => s.vmid !== goldenVmid)),
+    [steps, goldenVmid]
+  );
+  const goldenSteps = useMemo(
+    () => (goldenVmid === null ? [] : steps.filter((s) => s.vmid === goldenVmid)),
+    [steps, goldenVmid]
+  );
 
-  const vms = useMemo<VmProgress[]>(() => {
-    const byVmid = new Map<number, VmProgress>();
-    for (const step of steps) {
-      let entry = byVmid.get(step.vmid);
-      if (!entry) {
-        entry = { vmid: step.vmid, steps: new Map() };
-        byVmid.set(step.vmid, entry);
-      }
-      entry.steps.set(step.step, step);
-      if (step.status === "failed" && step.message) entry.error = step.message;
-    }
-    return [...byVmid.values()].sort((a, b) => a.vmid - b.vmid);
-  }, [steps]);
+  const columns = useMemo(() => buildColumns(vmSteps), [vmSteps]);
+  const vms = useMemo(() => groupByVm(vmSteps), [vmSteps]);
+  const goldenColumns = useMemo(() => buildColumns(goldenSteps), [goldenSteps]);
+  const golden = useMemo(() => groupByVm(goldenSteps)[0] ?? null, [goldenSteps]);
 
   const isComplete = formationStatus !== null && TERMINAL.includes(formationStatus);
 
@@ -132,5 +158,5 @@ export function useDeploymentProgress(formationId: string | null) {
     return (settled / steps.length) * 100;
   }, [steps]);
 
-  return { vms, columns, isComplete, formationStatus, failedVmids, progress };
+  return { vms, columns, golden, goldenColumns, isComplete, formationStatus, failedVmids, progress };
 }

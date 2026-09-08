@@ -126,7 +126,9 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
   const agent = await waitForAgent(proxmox, vmid, agentTimeoutMs);
   if (!agent.success) return fail(AGENT_STEP, agent.error!);
   await markStep(formationId, vmid, AGENT_STEP, "success");
-  await sleep(AGENT_SETTLE_MS);
+  // Le ping répond avant que l'agent Windows soit fiable pour exec pendant le boot storm.
+  // L'agent Linux, lui, est prêt dès le premier ping.
+  if (shell === "powershell") await sleep(AGENT_SETTLE_MS);
 
   await markStep(formationId, vmid, CONTEXT_STEP, "running");
 

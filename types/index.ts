@@ -11,6 +11,7 @@ export interface Formation {
   os_id: string | null;
   template_name: string | null;
   infra_group_id: string | null;
+  golden_vmid: number | null;
   vm_start_id: number;
   vm_end_id: number;
   vm_username: string;

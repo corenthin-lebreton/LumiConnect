@@ -108,7 +108,9 @@ export default async function FormationDetailPage({
           {
             label: "Template",
             value: String(formation.template_vmid),
-            sub: formation.template_name ?? "nom non enregistré",
+            sub: formation.golden_vmid
+              ? `image dorée VMID ${formation.golden_vmid}`
+              : (formation.template_name ?? "nom non enregistré"),
           },
           {
             label: "Infrastructure",

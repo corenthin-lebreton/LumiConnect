@@ -77,18 +77,24 @@ function Output({ label, content }: { label: string; content: string }) {
   );
 }
 
+type RowLabel = (vm: VmProgress, index: number) => string;
+
+const defaultRowLabel: RowLabel = (vm, index) => `Itération ${index + 1}, VMID ${vm.vmid}`;
+
 function VmRow({
   vm,
   columns,
   index,
   defaultOpen = false,
   focused = false,
+  rowLabel = defaultRowLabel,
 }: {
   vm: VmProgress;
   columns: readonly StepColumn[];
   index: number;
   defaultOpen?: boolean;
   focused?: boolean;
+  rowLabel?: RowLabel;
 }) {
   const [expanded, setExpanded] = useState(defaultOpen);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -192,9 +198,7 @@ function VmRow({
               );
             })}
           </ol>
-          <p className="mt-3 font-mono text-micro text-muted-foreground">
-            Itération {index + 1}, VMID {vm.vmid}
-          </p>
+          <p className="mt-3 font-mono text-micro text-muted-foreground">{rowLabel(vm, index)}</p>
         </div>
       )}
     </div>
@@ -206,11 +210,13 @@ export function VmTrackList({
   columns,
   emptyMessage,
   focusedVmid = null,
+  rowLabel,
 }: {
   vms: readonly VmProgress[];
   columns: readonly StepColumn[];
   emptyMessage: string;
   focusedVmid?: number | null;
+  rowLabel?: RowLabel;
 }) {
   if (vms.length === 0) {
     return (
@@ -242,6 +248,7 @@ export function VmTrackList({
             index={index}
             defaultOpen={vm.vmid === firstFailed?.vmid}
             focused={vm.vmid === focusedVmid}
+            rowLabel={rowLabel}
           />
         ))}
       </div>

@@ -169,6 +169,7 @@ function ScriptManifest({
               <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="text-sm font-medium">{entry.label}</span>
                 <Tag>toujours appliqué</Tag>
+                {entry.per_vm && <Tag>par VM</Tag>}
                 {entry.reboot_after && <Tag tone="warning">redémarrage</Tag>}
               </div>
               {entry.description && (
@@ -222,6 +223,7 @@ function ScriptManifest({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <span className="text-sm font-medium">{entry.label}</span>
+                    {entry.per_vm && <Tag>par VM</Tag>}
                     {entry.reboot_after && <Tag tone="warning">redémarrage</Tag>}
                     {entry.requires.length > 0 && (
                       <Tag>
@@ -252,7 +254,8 @@ function ScriptManifest({
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <p className="text-xs text-muted-foreground">
           <span className="font-mono tabular">{applied.length}</span> script
-          {applied.length > 1 ? "s" : ""} par VM, exécutés dans cet ordre
+          {applied.length > 1 ? "s" : ""}, exécutés dans cet ordre sur l&apos;image dorée puis
+          clonés ; ceux marqués « par VM » rejoués sur chaque machine
           {reboots > 0 && (
             <>
               , dont <span className="font-mono tabular">{reboots}</span> avec redémarrage
@@ -261,7 +264,8 @@ function ScriptManifest({
           .
         </p>
         <p className="text-xs text-muted-foreground">
-          Délai maximum <span className="font-mono tabular">{formatCeiling(ceiling)}</span> par VM
+          Délai maximum <span className="font-mono tabular">{formatCeiling(ceiling)}</span> pour
+          l&apos;image dorée
         </p>
       </div>
     </div>

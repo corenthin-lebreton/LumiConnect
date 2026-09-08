@@ -65,6 +65,7 @@ describe("resolveScriptPath", () => {
     requires: [],
     timeout_sec: 900,
     reboot_after: false,
+    per_vm: false,
     ...overrides,
   });
 
