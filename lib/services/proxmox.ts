@@ -1,5 +1,5 @@
 import type { ServiceResult, ProxmoxTemplate } from "@/types";
-import { TEMPLATE_TAG, hasTag, parseTemplateName } from "@/lib/templates";
+import { TEMPLATE_TAG, detectOsFamily, hasTag } from "@/lib/templates";
 import { POLL_INTERVAL_MS, PROXMOX_NODE, form, pveFetch, sleep } from "@/lib/services/proxmox-api";
 
 interface ProxmoxVmSummary {
@@ -32,17 +32,11 @@ export async function getTemplates(): Promise<ServiceResult<ProxmoxTemplate[]>> 
 
     const templates: ProxmoxTemplate[] = (data as ProxmoxVmSummary[])
       .filter((vm) => vm.template === 1 && hasTag(vm.tags, TEMPLATE_TAG))
-      .map((vm) => {
-        const parsed = parseTemplateName(vm.name ?? "");
-        return {
-          vmid: vm.vmid,
-          name: vm.name ?? String(vm.vmid),
-          os_id: parsed?.osId ?? null,
-          variant: parsed?.variant ?? null,
-          revision: parsed?.revision ?? null,
-          conforming: parsed !== null,
-        };
-      })
+      .map((vm) => ({
+        vmid: vm.vmid,
+        name: vm.name ?? String(vm.vmid),
+        os_id: detectOsFamily(vm.name ?? ""),
+      }))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     return { success: true, data: templates };

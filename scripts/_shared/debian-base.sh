@@ -14,23 +14,8 @@ fi
 . "$CONTEXT"
 
 : "${LC_HOSTNAME:?LC_HOSTNAME manquant dans le contexte}"
-: "${LC_USERNAME:?LC_USERNAME manquant dans le contexte}"
-: "${LC_PASSWORD:?LC_PASSWORD manquant dans le contexte}"
 
 log() { echo "[base] $*"; }
-
-primary_interface() {
-  local iface
-  iface=$(ip -o -4 route show default 2>/dev/null | awk '{print $5}' | head -1)
-  if [ -z "$iface" ]; then
-    iface=$(ip -o link show | awk -F': ' '$2 != "lo" {print $2; exit}')
-  fi
-  if [ -z "$iface" ]; then
-    echo "Aucune interface réseau exploitable" >&2
-    return 1
-  fi
-  printf '%s' "$iface"
-}
 
 # Tous les clones d'un même template partagent leur machine-id. Or le client DHCP en dérive son
 # client-identifier, et ISC dhcpd (pfSense) fait correspondre les baux sur ce client-id avant
@@ -64,100 +49,10 @@ set_hostname() {
   fi
 }
 
-ensure_user() {
-  log "compte utilisateur : $LC_USERNAME"
-  if id "$LC_USERNAME" >/dev/null 2>&1; then
-    usermod -aG sudo "$LC_USERNAME"
-  else
-    useradd --create-home --shell /bin/bash --groups sudo "$LC_USERNAME"
-  fi
-
-  # Le mot de passe passe par stdin : en argument, il apparaîtrait dans /proc et dans
-  # l'historique des processus de la VM.
-  printf '%s:%s\n' "$LC_USERNAME" "$LC_PASSWORD" | chpasswd
-}
-
-enable_ssh() {
-  log "activation de SSH"
-  local unit=ssh
-  systemctl list-unit-files 'sshd.service' 2>/dev/null | grep -q sshd.service && unit=sshd
-  systemctl enable --now "$unit"
-}
-
-configure_dhcp_networkmanager() {
-  local iface="$1" connection
-  connection=$(nmcli -g GENERAL.CONNECTION device show "$iface" 2>/dev/null | head -1)
-
-  if [ -z "$connection" ] || [ "$connection" = "--" ]; then
-    log "NetworkManager : création d'un profil DHCP pour $iface"
-    nmcli connection add type ethernet ifname "$iface" con-name "lumiconnect-$iface" \
-      ipv4.method auto ipv6.method auto >/dev/null
-    connection="lumiconnect-$iface"
-  else
-    log "NetworkManager : passage de « $connection » en DHCP"
-    nmcli connection modify "$connection" \
-      ipv4.method auto ipv4.addresses "" ipv4.gateway "" ipv4.dns "" >/dev/null
-  fi
-
-  nmcli connection up "$connection" >/dev/null
-}
-
-configure_dhcp_netplan() {
-  local iface="$1" file=/etc/netplan/99-lumiconnect.yaml
-  log "netplan : $iface en DHCP"
-
-  cat > "$file" <<YAML
-network:
-  version: 2
-  ethernets:
-    $iface:
-      dhcp4: true
-      dhcp6: false
-YAML
-
-  # netplan refuse d'appliquer un fichier lisible par tous.
-  chmod 600 "$file"
-  netplan apply
-}
-
-configure_dhcp_ifupdown() {
-  local iface="$1" file=/etc/network/interfaces.d/99-lumiconnect
-  log "ifupdown : $iface en DHCP"
-
-  mkdir -p /etc/network/interfaces.d
-  cat > "$file" <<CFG
-auto $iface
-iface $iface inet dhcp
-CFG
-
-  ifdown "$iface" >/dev/null 2>&1 || true
-  ifup "$iface"
-}
-
-configure_dhcp() {
-  local iface
-  iface=$(primary_interface)
-  log "interface primaire : $iface"
-
-  if systemctl is-active --quiet NetworkManager; then
-    configure_dhcp_networkmanager "$iface"
-  elif command -v netplan >/dev/null 2>&1 && [ -d /etc/netplan ]; then
-    configure_dhcp_netplan "$iface"
-  elif [ -d /etc/network ] || [ -f /etc/network/interfaces ]; then
-    configure_dhcp_ifupdown "$iface"
-  else
-    echo "Aucun gestionnaire réseau reconnu (ni NetworkManager, ni netplan, ni ifupdown)" >&2
-    return 1
-  fi
-}
-
-# L'ordre compte : l'identité machine et le hostname doivent être posés avant la demande DHCP,
-# sinon pfSense enregistre le bail sous l'ancien nom et l'ancien client-id.
+# L'ordre compte : l'identité machine doit être posée avant le hostname, qui est repris par le
+# client DHCP dans sa demande.
 regenerate_machine_id
 regenerate_ssh_host_keys
 set_hostname
-ensure_user
-enable_ssh
-configure_dhcp
 
 log "terminé"

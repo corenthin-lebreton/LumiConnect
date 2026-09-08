@@ -1,11 +1,11 @@
 {
-  "os_id": "ubuntu2404",
+  "os_id": "linux",
   "shell": "bash",
   "scripts": [
     {
       "id": "base",
       "label": "Configuration de base",
-      "description": "Identité machine, hostname, compte utilisateur, SSH, carte réseau en DHCP.",
+      "description": "Identité machine, clés d’hôte SSH et hostname.",
       "mandatory": true,
       "timeout_sec": 300,
       "file": "../_shared/debian-base.sh"

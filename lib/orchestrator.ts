@@ -7,6 +7,7 @@ import { mapWithConcurrency, readConcurrency } from "@/lib/pool";
 import { loadRegistry, type ScriptEntry, type ScriptRegistry } from "@/lib/scripts/registry";
 import { resolveSelection } from "@/lib/scripts/resolve";
 import { CONFIGURE_STEPS, configureVm, scriptSteps } from "@/lib/pipeline/configure-vm";
+import { REBOOT_STEPS, needsReboot, runRebootStep } from "@/lib/pipeline/reboot-step";
 import { NETWORK_STEPS, runNetworkStep } from "@/lib/pipeline/network-step";
 import { GUACAMOLE_STEPS, runGuacamoleStep } from "@/lib/pipeline/guacamole-step";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -75,9 +76,12 @@ export async function deployFormation(formation: Formation) {
 
   const selection = await loadSelection(formation);
 
+  const rebootAfterScripts = selection !== null && needsReboot(selection.entries);
+
   const steps: StepDefinition[] = [
     ...PROVISION_STEPS,
     ...(selection ? [...CONFIGURE_STEPS, ...scriptSteps(selection.entries)] : []),
+    ...(rebootAfterScripts ? REBOOT_STEPS : []),
     ...NETWORK_STEPS,
     ...GUACAMOLE_STEPS,
   ];
@@ -149,6 +153,20 @@ export async function deployFormation(formation: Formation) {
         }
       }
     );
+  }
+
+  if (rebootAfterScripts) {
+    const rebootFailed = await runRebootStep(
+      formation,
+      vmContexts.filter((v) => !v.failed).map((v) => v.vmid),
+      AGENT_TIMEOUT_MS
+    );
+    for (const vm of vmContexts) {
+      if (rebootFailed.has(vm.vmid)) {
+        vm.failed = true;
+        vm.failedStep = vm.failedStep ?? "reboot";
+      }
+    }
   }
 
   const networkResult = await runNetworkStep(

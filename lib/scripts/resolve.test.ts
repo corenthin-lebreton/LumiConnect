@@ -20,7 +20,7 @@ function entry(id: string, overrides: Partial<ScriptEntry> = {}): ScriptEntry {
 }
 
 function registryOf(scripts: ScriptEntry[]): ScriptRegistry {
-  return { os_id: "debian13", shell: "bash", scripts };
+  return { os_id: "linux", shell: "bash", scripts };
 }
 
 const ids = (entries: ScriptEntry[]) => entries.map((e) => e.id);

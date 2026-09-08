@@ -4,15 +4,21 @@ Ce que LumiConnect exécute à l'intérieur des VMs après leur démarrage. Un s
 
 ```
 scripts/
-  <os_id>/registry.json     déclaration des scripts proposés pour cet OS
-  <os_id>/<id>.ps1|.sh      le script lui-même
-  _shared/                  scripts partagés entre plusieurs OS
+  windows/registry.json     déclaration des scripts proposés pour Windows (PowerShell)
+  windows/<id>.ps1          le script lui-même
+  linux/registry.json       déclaration des scripts proposés pour Linux (bash)
+  linux/<id>.sh
+  _shared/                  scripts partagés
 ```
+
+Un dossier par famille d'OS, pas par distribution. La famille est déduite du nom du template
+Proxmox par mots-clés (`OS_FAMILIES` dans `lib/templates.ts`) : une nouvelle distribution
+Linux, c'est un mot-clé de plus dans cette liste, et les scripts `linux/` doivent la supporter.
 
 ## Ajouter un outil
 
-1. Écrire le script dans `_shared/` s'il vaut pour plusieurs distributions, sinon dans le
-   dossier de l'OS.
+1. Écrire le script dans le dossier de la famille (`windows/` ou `linux/`), ou dans `_shared/`
+   s'il vaut pour plusieurs.
 2. Ajouter une entrée dans le `registry.json` concerné.
 3. `pnpm test` — la syntaxe est contrôlée par `bash -n` et par l'analyseur PowerShell.
 

@@ -1,5 +1,5 @@
 {
-  "os_id": "win11",
+  "os_id": "windows",
   "shell": "powershell",
   "scripts": [
     {

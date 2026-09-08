@@ -1,48 +1,53 @@
 import { describe, expect, it } from "vitest";
-import { TEMPLATE_TAG, hasTag, parseTemplateName } from "./templates";
+import { TEMPLATE_TAG, detectOsFamily, hasTag } from "./templates";
 
-describe("parseTemplateName", () => {
-  it("reconnaît les quatre templates du projet", () => {
-    expect(parseTemplateName("tpl-win11-pro-v1")).toEqual({
-      osId: "win11",
-      variant: "pro",
-      revision: 1,
-    });
-    expect(parseTemplateName("tpl-debian13-std-v1")).toEqual({
-      osId: "debian13",
-      variant: "std",
-      revision: 1,
-    });
-    expect(parseTemplateName("tpl-ubuntu2404-std-v12")).toEqual({
-      osId: "ubuntu2404",
-      variant: "std",
-      revision: 12,
-    });
-    expect(parseTemplateName("tpl-kali-std-v3")).toEqual({
-      osId: "kali",
-      variant: "std",
-      revision: 3,
-    });
-  });
-
-  it("rejette les noms hors nomenclature", () => {
+describe("detectOsFamily", () => {
+  it("reconnaît Windows quelle que soit la casse ou la forme", () => {
     for (const name of [
       "win11",
-      "tpl-win11-v1",
-      "tpl-win11-pro",
-      "tpl-win11-pro-v",
-      "tpl-Win11-pro-v1",
-      "tpl-win11-pro-v1-extra",
-      "template-win11-pro-v1",
-      "",
+      "Win11-Pro",
+      "WINDOWS",
+      "Formation Windows 11 Pro",
+      "tpl-win11-pro-v1",
+      "lab_windows_2025",
     ]) {
-      expect(parseTemplateName(name), name).toBeNull();
+      expect(detectOsFamily(name), name).toBe("windows");
     }
   });
 
-  it("ne laisse pas un os_id contenir de quoi construire un chemin", () => {
-    for (const name of ["tpl-../etc-std-v1", "tpl-a/b-std-v1", "tpl-a.b-std-v1"]) {
-      expect(parseTemplateName(name), name).toBeNull();
+  it("reconnaît les distributions Linux quelle que soit la casse ou la forme", () => {
+    for (const name of [
+      "debian13",
+      "Debian 13 Lab",
+      "deb-13",
+      "tpl-debian13-v2",
+      "ubuntu2404",
+      "Ubuntu 24.04",
+      "ubun-server",
+      "kali",
+      "KALI-2025",
+      "kal",
+      "Linux générique",
+    ]) {
+      expect(detectOsFamily(name), name).toBe("linux");
+    }
+  });
+
+  it("ne déduit rien d'un nom sans mot-clé", () => {
+    for (const name of ["", "test", "macos-sonoma", "freebsd14", "poste-formateur"]) {
+      expect(detectOsFamily(name), name).toBeNull();
+    }
+  });
+
+  it("ne déduit rien d'un mot-clé collé à la fin d'un autre mot", () => {
+    for (const name of ["darwin", "alkali", "mywin", "adebian"]) {
+      expect(detectOsFamily(name), name).toBeNull();
+    }
+  });
+
+  it("ne tranche pas quand plusieurs familles apparaissent", () => {
+    for (const name of ["linux-sur-windows", "win-kali", "Debian Windows"]) {
+      expect(detectOsFamily(name), name).toBeNull();
     }
   });
 });

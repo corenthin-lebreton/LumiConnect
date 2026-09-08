@@ -5,7 +5,7 @@ import { loadRegistry, resolveScriptPath } from "./registry";
 
 const run = promisify(execFile);
 
-const OS_IDS = ["win11", "debian13", "ubuntu2404", "kali"] as const;
+const OS_IDS = ["windows", "linux"] as const;
 
 function isAvailable(command: string): boolean {
   try {

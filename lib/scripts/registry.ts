@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import type { Shell } from "@/lib/scripts/escape";
+import { OS_FAMILY_IDS } from "@/lib/templates";
 
 export const SCRIPTS_ROOT = path.join(process.cwd(), "scripts");
 
@@ -21,7 +22,7 @@ const scriptEntrySchema = z.object({
 });
 
 const registrySchema = z.object({
-  os_id: z.string().regex(/^[a-z0-9]+$/),
+  os_id: z.enum(OS_FAMILY_IDS),
   shell: z.enum(["powershell", "bash"]),
   scripts: z.array(scriptEntrySchema).min(1),
 });

@@ -1,19 +1,23 @@
 export const TEMPLATE_TAG = "lc-tpl";
 
-const TEMPLATE_NAME = /^tpl-([a-z0-9]+)-([a-z0-9]+)-v(\d+)$/;
+export type OsFamily = "windows" | "linux";
 
-export interface ParsedTemplateName {
-  osId: string;
-  variant: string;
-  revision: number;
-}
+export const OS_FAMILIES: ReadonlyArray<{ id: OsFamily; keywords: readonly string[] }> = [
+  { id: "windows", keywords: ["windows", "win"] },
+  { id: "linux", keywords: ["debian", "deb", "ubuntu", "ubun", "kali", "kal", "linux"] },
+];
 
-export function parseTemplateName(name: string): ParsedTemplateName | null {
-  const match = TEMPLATE_NAME.exec(name);
-  if (!match) return null;
+export const OS_FAMILY_IDS = OS_FAMILIES.map((family) => family.id) as [OsFamily, ...OsFamily[]];
 
-  const [, osId, variant, revision] = match;
-  return { osId, variant, revision: Number(revision) };
+// Un mot-clé doit ouvrir un token (« Win11 », « lab-debian ») : « darwin » ne vaut pas Windows.
+const FAMILY_PATTERNS = OS_FAMILIES.map((family) => ({
+  id: family.id,
+  pattern: new RegExp(`(?<![a-z])(?:${family.keywords.join("|")})`, "i"),
+}));
+
+export function detectOsFamily(name: string): OsFamily | null {
+  const matches = FAMILY_PATTERNS.filter(({ pattern }) => pattern.test(name));
+  return matches.length === 1 ? matches[0].id : null;
 }
 
 export function hasTag(tags: string | undefined | null, tag: string): boolean {

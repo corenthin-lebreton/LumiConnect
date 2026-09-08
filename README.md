@@ -36,14 +36,17 @@ version. `VM.Monitor` couvre le guest agent sur PVE 8, sur PVE 9 et plus il faut
 `VM.GuestAgent.Unrestricted` et `VM.GuestAgent.FileWrite`. Prévoir aussi `VM.Clone`,
 `VM.Config.*`, `VM.PowerMgmt` et `VM.Allocate`.
 
-Templates nommés `tpl-<os>-<variante>-v<révision>` et portant le tag `lc-tpl`.
+Templates portant le tag `lc-tpl`, nommés librement. La famille d'OS est déduite du nom, sans
+tenir compte de la casse. Un mot-clé doit ouvrir un mot (`Win11-Pro`, `Debian 13`, `lab_kali`) ;
+un nom sans mot-clé, ou qui en mélange deux familles, est listé mais aucun script n'est proposé.
 
-| Template | OS reconnu |
-|---|---|
-| `tpl-win11-pro-v1` | `win11` |
-| `tpl-debian13-std-v1` | `debian13` |
-| `tpl-ubuntu2404-std-v1` | `ubuntu2404` |
-| `tpl-kali-std-v1` | `kali` |
+| Famille | Mots-clés reconnus | Scripts |
+|---|---|---|
+| `windows` | `windows`, `win` | `scripts/windows/` |
+| `linux` | `debian`, `deb`, `ubuntu`, `ubun`, `kali`, `kal`, `linux` | `scripts/linux/` |
+
+La liste vit dans `OS_FAMILIES` (`lib/templates.ts`) : ajouter une distribution, c'est y ajouter
+un mot-clé.
 
 Chaque template doit embarquer `qemu-guest-agent` installé et démarré, sans quoi rien ne peut
 être configuré. Windows 11 réclame en plus `machine q35`, un BIOS OVMF, un disque EFI et un TPM

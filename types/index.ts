@@ -1,3 +1,5 @@
+import type { OsFamily } from "@/lib/templates";
+
 export type FormationStatus = "draft" | "deploying" | "deployed" | "failed" | "deleting" | "cleanup_failed";
 export type VmStatus = "pending" | "cloning" | "configuring" | "ready" | "failed";
 export type StepStatus = "pending" | "running" | "success" | "failed" | "skipped";
@@ -47,10 +49,7 @@ export interface ServiceResult<T = unknown> {
 export interface ProxmoxTemplate {
   vmid: number;
   name: string;
-  os_id: string | null;
-  variant: string | null;
-  revision: number | null;
-  conforming: boolean;
+  os_id: OsFamily | null;
 }
 
 export interface VmStep {

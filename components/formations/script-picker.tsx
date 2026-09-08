@@ -9,6 +9,7 @@ import {
   totalTimeoutSec,
 } from "@/lib/scripts/resolve";
 import type { ScriptEntry, ScriptRegistry } from "@/lib/scripts/registry";
+import { OS_FAMILIES } from "@/lib/templates";
 
 interface Props {
   osId: string | null;
@@ -97,11 +98,16 @@ export function ScriptPicker({ osId, templateChosen, value, onChange }: Props) {
   if (!osId) {
     return (
       <Notice icon={<TriangleAlert className="h-4 w-4 text-warning" />}>
-        Ce template ne suit pas la nomenclature{" "}
-        <code className="font-mono text-xs">tpl-&lt;os&gt;-&lt;variante&gt;-v&lt;rév&gt;</code>, donc
-        aucun système d&apos;exploitation n&apos;en est déduit. Les VMs seront clonées et
-        joignables, mais rien ne sera configuré à l&apos;intérieur. Renommer le template sur
-        Proxmox pour débloquer cette étape.
+        Aucun système d&apos;exploitation n&apos;est reconnu dans le nom de ce template. Les VMs
+        seront clonées et joignables, mais rien ne sera configuré à l&apos;intérieur. Renommer le
+        template sur Proxmox avec l&apos;un de ces mots :{" "}
+        {OS_FAMILIES.map((family, index) => (
+          <span key={family.id}>
+            {index > 0 && " · "}
+            <code className="font-mono text-xs">{family.keywords.join(", ")}</code>
+          </span>
+        ))}
+        .
       </Notice>
     );
   }
