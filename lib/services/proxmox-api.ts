@@ -1,8 +1,4 @@
-const PROXMOX_URL = process.env.PROXMOX_URL!;
-const PROXMOX_TOKEN_ID = process.env.PROXMOX_TOKEN_ID!;
-const PROXMOX_TOKEN_SECRET = process.env.PROXMOX_TOKEN_SECRET!;
-
-export const PROXMOX_NODE = process.env.PROXMOX_NODE!;
+import type { ProxmoxConfig } from "@/types";
 
 export const POLL_INTERVAL_MS = 2000;
 
@@ -10,11 +6,11 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function pveFetch(path: string, options: RequestInit = {}) {
-  const res = await fetch(`${PROXMOX_URL}/api2/json${path}`, {
+export async function pveFetch(proxmox: ProxmoxConfig, path: string, options: RequestInit = {}) {
+  const res = await fetch(`${proxmox.url}/api2/json${path}`, {
     ...options,
     headers: {
-      Authorization: `PVEAPIToken=${PROXMOX_TOKEN_ID}=${PROXMOX_TOKEN_SECRET}`,
+      Authorization: `PVEAPIToken=${proxmox.tokenId}=${proxmox.tokenSecret}`,
       ...options.headers,
     },
   });

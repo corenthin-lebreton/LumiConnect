@@ -5,6 +5,7 @@ import { formationSchema } from "@/lib/schemas";
 import { encryptSecret } from "@/lib/crypto";
 import { loadRegistry } from "@/lib/scripts/registry";
 import { resolveSelection } from "@/lib/scripts/resolve";
+import { loadInfraRow } from "@/lib/infra/groups";
 
 export async function GET() {
   const supabase = await createServerSupabaseClient();
@@ -32,6 +33,14 @@ export async function POST(request: Request) {
   }
 
   const { script_ids, ...formationData } = parsed.data;
+
+  try {
+    if (!(await loadInfraRow(formationData.infra_group_id))) {
+      return NextResponse.json({ error: "Groupe d'infrastructure introuvable" }, { status: 404 });
+    }
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+  }
 
   let resolvedIds: string[] = [];
   if (formationData.os_id) {

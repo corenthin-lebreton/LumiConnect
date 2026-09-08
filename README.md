@@ -55,6 +55,12 @@ Chaque template doit embarquer `qemu-guest-agent` installé et démarré, sans q
 pfSense avec l'API v2 activée et une interface DHCP configurée, Guacamole avec un compte
 administrateur, et un projet Supabase.
 
+Ces trois services se déclarent dans l'application, page **Paramètres**, sous forme de
+**groupes d'infrastructure** : un groupe = un Proxmox + un pfSense + un Guacamole. Chaque
+formation se déploie sur un groupe, un groupe en héberge autant qu'on veut. Sans groupe, aucun
+déploiement n'est possible. Les secrets (token Proxmox, clé pfSense, mot de passe Guacamole) sont
+chiffrés en base avec `LC_ENCRYPTION_KEY` et ne sont jamais renvoyés au navigateur.
+
 ## Installation
 
 ```bash
@@ -63,14 +69,24 @@ cp .env.example .env.local
 openssl rand -base64 32
 ```
 
-La valeur générée par `openssl` va dans `LC_ENCRYPTION_KEY`. Renseigner ensuite les autres
-variables de `.env.local`, en particulier l'accès Proxmox, pfSense, Guacamole et Supabase.
+La valeur générée par `openssl` va dans `LC_ENCRYPTION_KEY`. Renseigner ensuite l'accès
+Supabase dans `.env.local`.
 
 Appliquer les migrations de `supabase/migrations/` dans l'ordre.
 
 ```bash
 pnpm dev
 ```
+
+Puis créer le premier groupe d'infrastructure dans **Paramètres**. Pour reprendre une
+configuration `.env` historique (`PROXMOX_*`, `PFSENSE_*`, `GUACAMOLE_*`) en une fois :
+
+```bash
+pnpm seed:group -- --name "Salle principale"
+```
+
+Le script crée le groupe, y rattache les formations existantes, reprend
+`lib/services/pfsense-ca.pem` s'il existe, puis ces variables peuvent quitter le `.env`.
 
 En production, `docker compose up -d --build` construit et lance l'application seule, sans
 service additionnel.
@@ -90,8 +106,10 @@ Avant tout déploiement réel, valider le socle sur une VM.
 
 ```bash
 pnpm probe:agent 201 bash
-pnpm probe:agent 210 powershell
+pnpm probe:agent 210 powershell --group "Salle principale"
 ```
+
+`--group` est facultatif tant qu'un seul groupe existe.
 
 La sonde démarre la VM, attend l'agent, écrit un fichier, l'exécute, contrôle qu'une valeur
 hostile ressort intacte et qu'un code de sortie non nul est bien détecté comme un échec. Tant

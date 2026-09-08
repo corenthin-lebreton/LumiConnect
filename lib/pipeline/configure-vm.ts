@@ -10,6 +10,7 @@ import { renderContextFile, type Shell } from "@/lib/scripts/escape";
 import { loadScriptContent, type ScriptEntry, type ScriptRegistry } from "@/lib/scripts/registry";
 import { markStep } from "@/lib/progress";
 import type { StepDefinition } from "@/lib/progress";
+import type { ProxmoxConfig } from "@/types";
 
 const START_STEP = "start";
 const AGENT_STEP = "wait_agent";
@@ -83,6 +84,7 @@ function removeContextCommand(shell: Shell, paths: GuestPaths): string[] {
 }
 
 export interface ConfigureVmOptions {
+  proxmox: ProxmoxConfig;
   formationId: string;
   vmid: number;
   hostname: string;
@@ -106,7 +108,7 @@ const AGENT_SETTLE_MS = Number(process.env.LC_AGENT_SETTLE_SEC ?? 90) * 1000;
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function configureVm(options: ConfigureVmOptions): Promise<ConfigureVmResult> {
-  const { formationId, vmid, registry, entries, agentTimeoutMs } = options;
+  const { proxmox, formationId, vmid, registry, entries, agentTimeoutMs } = options;
   const shell = registry.shell;
   const paths = guestPaths(shell);
 
@@ -116,12 +118,12 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
   };
 
   await markStep(formationId, vmid, START_STEP, "running");
-  const started = await startVm(vmid);
+  const started = await startVm(proxmox, vmid);
   if (!started.success) return fail(START_STEP, started.error!);
   await markStep(formationId, vmid, START_STEP, "success");
 
   await markStep(formationId, vmid, AGENT_STEP, "running");
-  const agent = await waitForAgent(vmid, agentTimeoutMs);
+  const agent = await waitForAgent(proxmox, vmid, agentTimeoutMs);
   if (!agent.success) return fail(AGENT_STEP, agent.error!);
   await markStep(formationId, vmid, AGENT_STEP, "success");
   await sleep(AGENT_SETTLE_MS);
@@ -129,6 +131,7 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
   await markStep(formationId, vmid, CONTEXT_STEP, "running");
 
   const prepared = await runGuestCommand(
+    proxmox,
     vmid,
     prepareDirectoryCommand(shell, paths),
     COMMAND_TIMEOUT_MS
@@ -148,14 +151,14 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
     return fail(CONTEXT_STEP, (e as Error).message);
   }
 
-  const contextWritten = await guestFileWrite(vmid, paths.contextPath, contextBody);
+  const contextWritten = await guestFileWrite(proxmox, vmid, paths.contextPath, contextBody);
   if (!contextWritten.success) {
     return fail(CONTEXT_STEP, `écriture du contexte : ${contextWritten.error}`);
   }
 
   const restrict = restrictContextCommand(shell, paths);
   if (restrict) {
-    const restricted = await runGuestCommand(vmid, restrict, COMMAND_TIMEOUT_MS);
+    const restricted = await runGuestCommand(proxmox, vmid, restrict, COMMAND_TIMEOUT_MS);
     if (!restricted.success) {
       return fail(CONTEXT_STEP, `droits sur le contexte : ${restricted.error}`);
     }
@@ -174,7 +177,7 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
         return fail(step, (e as Error).message);
       }
 
-      const run = await runGuestScript({
+      const run = await runGuestScript(proxmox, {
         vmid,
         shell,
         remotePath: `${paths.dir}${paths.separator}${entry.id}.${paths.extension}`,
@@ -199,12 +202,12 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
       });
 
       if (entry.reboot_after) {
-        const rebooted = await rebootVm(vmid);
+        const rebooted = await rebootVm(proxmox, vmid);
         if (!rebooted.success) {
           return fail(step, `redémarrage après ${entry.id} : ${rebooted.error}`);
         }
 
-        const backUp = await waitForAgent(vmid, agentTimeoutMs);
+        const backUp = await waitForAgent(proxmox, vmid, agentTimeoutMs);
         if (!backUp.success) {
           return fail(step, `guest agent après redémarrage : ${backUp.error}`);
         }
@@ -216,7 +219,7 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
 
   const result = await runScripts();
 
-  const removed = await runGuestCommand(vmid, removeContextCommand(shell, paths), COMMAND_TIMEOUT_MS);
+  const removed = await runGuestCommand(proxmox, vmid, removeContextCommand(shell, paths), COMMAND_TIMEOUT_MS);
   if (!removed.success) {
     console.error(`[configure] suppression du contexte échouée vmid=${vmid} : ${removed.error}`);
   }

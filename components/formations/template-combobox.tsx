@@ -9,9 +9,10 @@ interface Props {
   templates: ProxmoxTemplate[];
   value: number;
   onChange: (vmid: number) => void;
+  disabled?: boolean;
 }
 
-export function TemplateCombobox({ templates, value, onChange }: Props) {
+export function TemplateCombobox({ templates, value, onChange, disabled = false }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
@@ -48,7 +49,8 @@ export function TemplateCombobox({ templates, value, onChange }: Props) {
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
-        className="flex h-10 w-full items-center justify-between rounded-md border border-line-strong bg-card px-3 py-2 text-sm outline-none transition-[border-color,box-shadow] duration-150 hover:border-foreground/30 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+        disabled={disabled}
+        className="flex h-10 w-full disabled:cursor-not-allowed disabled:opacity-50 items-center justify-between rounded-md border border-line-strong bg-card px-3 py-2 text-sm outline-none transition-[border-color,box-shadow] duration-150 hover:border-foreground/30 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
       >
         {selected ? (
           <span className="flex items-center gap-2 truncate">

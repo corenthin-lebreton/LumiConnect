@@ -10,6 +10,7 @@ export interface Formation {
   template_vmid: number;
   os_id: string | null;
   template_name: string | null;
+  infra_group_id: string | null;
   vm_start_id: number;
   vm_end_id: number;
   vm_username: string;
@@ -84,4 +85,73 @@ export interface Job {
   heartbeat_at: string | null;
   finished_at: string | null;
   created_at: string;
+}
+
+export interface ProxmoxConfig {
+  url: string;
+  node: string;
+  tokenId: string;
+  tokenSecret: string;
+}
+
+export interface PfsenseConfig {
+  url: string;
+  apiKey: string;
+  caPem: string | null;
+  insecureTls: boolean;
+}
+
+export interface GuacamoleConfig {
+  url: string;
+  datasource: string;
+  adminUser: string;
+  adminPassword: string;
+}
+
+export interface InfraConfig {
+  id: string;
+  name: string;
+  proxmox: ProxmoxConfig;
+  pfsense: PfsenseConfig;
+  guacamole: GuacamoleConfig;
+}
+
+export interface InfraGroupRow {
+  id: string;
+  name: string;
+  proxmox_url: string;
+  proxmox_node: string;
+  proxmox_token_id: string;
+  proxmox_token_secret: string;
+  pfsense_url: string;
+  pfsense_api_key: string;
+  pfsense_ca_pem: string | null;
+  pfsense_insecure_tls: boolean;
+  guacamole_url: string;
+  guacamole_datasource: string;
+  guacamole_admin_user: string;
+  guacamole_admin_password: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type InfraGroupSecretField =
+  | "proxmox_token_secret"
+  | "pfsense_api_key"
+  | "guacamole_admin_password";
+
+export interface InfraGroupSummary extends Omit<InfraGroupRow, InfraGroupSecretField> {
+  formations_count: number;
+}
+
+export interface ServiceProbe {
+  ok: boolean;
+  error?: string;
+}
+
+export interface InfraHealth {
+  proxmox: ServiceProbe;
+  pfsense: ServiceProbe;
+  guacamole: ServiceProbe;
 }

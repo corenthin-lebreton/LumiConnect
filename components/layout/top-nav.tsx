@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { LogOut, Layers, Users, Menu, X } from "lucide-react";
+import { LogOut, Layers, Users, Menu, Settings, X } from "lucide-react";
 import { ServiceStatus } from "./service-status";
 import { ThemeToggle } from "./theme-toggle";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 const navItems = [
   { href: "/formations", label: "Formations", icon: Layers },
   { href: "/users", label: "Utilisateurs", icon: Users },
+  { href: "/parametres", label: "Paramètres", icon: Settings },
 ];
 
 export function TopNav() {

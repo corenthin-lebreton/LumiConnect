@@ -11,7 +11,7 @@ import { REBOOT_STEPS, needsReboot, runRebootStep } from "@/lib/pipeline/reboot-
 import { NETWORK_STEPS, runNetworkStep } from "@/lib/pipeline/network-step";
 import { GUACAMOLE_STEPS, runGuacamoleStep } from "@/lib/pipeline/guacamole-step";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Formation, FormationVm } from "@/types";
+import type { Formation, FormationVm, InfraConfig } from "@/types";
 
 const CLONE_CONCURRENCY = readConcurrency(process.env.LC_CLONE_CONCURRENCY, 8);
 const CONFIGURE_CONCURRENCY = readConcurrency(process.env.LC_CONFIGURE_CONCURRENCY, 4);
@@ -52,8 +52,8 @@ async function loadSelection(formation: Formation): Promise<Selection | null> {
   return { registry, entries };
 }
 
-export async function deployFormation(formation: Formation) {
-  console.log(`[deploy] démarrage de la formation ${formation.name}`);
+export async function deployFormation(formation: Formation, infra: InfraConfig) {
+  console.log(`[deploy] démarrage de la formation ${formation.name} sur ${infra.name}`);
   const supabase = createAdminClient();
 
   const vmCount = formation.vm_end_id - formation.vm_start_id + 1;
@@ -106,6 +106,7 @@ export async function deployFormation(formation: Formation) {
   await mapWithConcurrency(vmContexts, CLONE_CONCURRENCY, async (vm) => {
     await markStep(formation.id, vm.vmid, "clone", "running");
     const result = await proxmox.cloneVm(
+      infra.proxmox,
       formation.template_vmid,
       vm.vmid,
       `${formation.name}-${vm.vmid}`,
@@ -134,6 +135,7 @@ export async function deployFormation(formation: Formation) {
         await updateVm(vm.vmid, { status: "configuring" });
 
         const result = await configureVm({
+          proxmox: infra.proxmox,
           formationId: formation.id,
           vmid: vm.vmid,
           hostname: `${formation.name}-${vm.vmid}`,
@@ -157,6 +159,7 @@ export async function deployFormation(formation: Formation) {
 
   if (rebootAfterScripts) {
     const rebootFailed = await runRebootStep(
+      infra.proxmox,
       formation,
       vmContexts.filter((v) => !v.failed).map((v) => v.vmid),
       AGENT_TIMEOUT_MS
@@ -170,6 +173,7 @@ export async function deployFormation(formation: Formation) {
   }
 
   const networkResult = await runNetworkStep(
+    infra.proxmox,
     formation,
     vmContexts.filter((v) => !v.failed).map((vm) => ({ vmid: vm.vmid, mac: vm.mac! })),
     AGENT_TIMEOUT_MS
@@ -184,6 +188,7 @@ export async function deployFormation(formation: Formation) {
   }
 
   const guacFailed = await runGuacamoleStep(
+    infra.guacamole,
     formation,
     vmContexts
       .filter((v) => !v.failed && v.ip !== null)
@@ -203,7 +208,7 @@ export async function deployFormation(formation: Formation) {
     .eq("formation_id", formation.id)
     .order("vmid");
 
-  await generatePdf(formation, (allVms ?? []) as FormationVm[]);
+  await generatePdf(formation, (allVms ?? []) as FormationVm[], infra.guacamole.url);
 
   await supabase
     .from("formations")

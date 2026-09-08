@@ -82,9 +82,9 @@ function CredentialsPdf({
 
 export async function generatePdf(
   formation: Formation,
-  vms: FormationVm[]
+  vms: FormationVm[],
+  guacamoleUrl: string
 ): Promise<Buffer> {
-  const guacamoleUrl = process.env.GUACAMOLE_URL ?? "https://guacamole.example.com";
   const element = CredentialsPdf({ formation, vms, guacamoleUrl });
   return renderToBuffer(element);
 }

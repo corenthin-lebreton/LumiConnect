@@ -16,12 +16,19 @@ export async function POST(
 
   const { data: formation, error } = await supabase
     .from("formations")
-    .select("id, status")
+    .select("id, status, infra_group_id")
     .eq("id", id)
     .single();
 
   if (error || !formation) {
     return NextResponse.json({ error: "Formation not found" }, { status: 404 });
+  }
+
+  if (!formation.infra_group_id) {
+    return NextResponse.json(
+      { error: "Cette formation n'est rattachée à aucun groupe d'infrastructure" },
+      { status: 409 }
+    );
   }
 
   if (formation.status !== "draft") {

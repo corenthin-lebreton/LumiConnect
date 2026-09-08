@@ -4,7 +4,7 @@ import { markStep } from "@/lib/progress";
 import type { StepDefinition } from "@/lib/progress";
 import { mapWithConcurrency, readConcurrency } from "@/lib/pool";
 import type { ScriptEntry } from "@/lib/scripts/registry";
-import type { Formation } from "@/types";
+import type { Formation, ProxmoxConfig } from "@/types";
 
 const REBOOT_STEP = "reboot";
 
@@ -18,6 +18,7 @@ export function needsReboot(entries: readonly ScriptEntry[]): boolean {
 }
 
 export async function runRebootStep(
+  proxmox: ProxmoxConfig,
   formation: Formation,
   vmids: readonly number[],
   agentTimeoutMs: number
@@ -41,10 +42,10 @@ export async function runRebootStep(
   await mapWithConcurrency(vmids, REBOOT_CONCURRENCY, async (vmid) => {
     await markStep(formation.id, vmid, REBOOT_STEP, "running");
 
-    const rebooted = await rebootVm(vmid);
+    const rebooted = await rebootVm(proxmox, vmid);
     if (!rebooted.success) return markVmFailed(vmid, `redémarrage : ${rebooted.error}`);
 
-    const backUp = await waitForAgent(vmid, agentTimeoutMs);
+    const backUp = await waitForAgent(proxmox, vmid, agentTimeoutMs);
     if (!backUp.success) return markVmFailed(vmid, `guest agent après redémarrage : ${backUp.error}`);
 
     await markStep(formation.id, vmid, REBOOT_STEP, "success");

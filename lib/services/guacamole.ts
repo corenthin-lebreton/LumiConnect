@@ -1,35 +1,41 @@
-import type { ServiceResult } from "@/types";
+import type { GuacamoleConfig, ServiceResult } from "@/types";
+import { describeFetchError } from "@/lib/services/fetch-error";
 
-const GUACAMOLE_URL = process.env.GUACAMOLE_URL!;
-const GUACAMOLE_ADMIN_USER = process.env.GUACAMOLE_ADMIN_USER!;
-const GUACAMOLE_ADMIN_PASSWORD = process.env.GUACAMOLE_ADMIN_PASSWORD!;
-const GUACAMOLE_DATASOURCE = process.env.GUACAMOLE_DATASOURCE!;
+const TOKEN_TTL_MS = 10 * 60 * 1000;
 
-let cachedToken: { value: string; expiresAt: number } | null = null;
+// Un token par serveur et par compte : deux groupes pointant sur des Guacamole différents ne
+// doivent jamais se partager une session.
+const tokenCache = new Map<string, { value: string; expiresAt: number }>();
 
-async function getToken(): Promise<string> {
-  if (cachedToken && Date.now() < cachedToken.expiresAt) {
-    return cachedToken.value;
-  }
-  const res = await fetch(`${GUACAMOLE_URL}/api/tokens`, {
+function cacheKey(guac: GuacamoleConfig): string {
+  return `${guac.url}\u0000${guac.adminUser}\u0000${guac.adminPassword}`;
+}
+
+export function clearTokenCache(): void {
+  tokenCache.clear();
+}
+
+async function getToken(guac: GuacamoleConfig): Promise<string> {
+  const key = cacheKey(guac);
+  const cached = tokenCache.get(key);
+  if (cached && Date.now() < cached.expiresAt) return cached.value;
+
+  const res = await fetch(`${guac.url}/api/tokens`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      username: GUACAMOLE_ADMIN_USER,
-      password: GUACAMOLE_ADMIN_PASSWORD,
-    }).toString(),
+    body: new URLSearchParams({ username: guac.adminUser, password: guac.adminPassword }).toString(),
+    signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`Guacamole auth failed: ${res.status}`);
   const data = await res.json();
-  cachedToken = { value: data.authToken, expiresAt: Date.now() + 10 * 60 * 1000 };
+  tokenCache.set(key, { value: data.authToken, expiresAt: Date.now() + TOKEN_TTL_MS });
   return data.authToken;
 }
 
-async function guacFetch(path: string, options: RequestInit = {}) {
-  const token = await getToken();
-  const ds = GUACAMOLE_DATASOURCE;
+async function guacFetch(guac: GuacamoleConfig, path: string, options: RequestInit = {}) {
+  const token = await getToken(guac);
   const res = await fetch(
-    `${GUACAMOLE_URL}/api/session/data/${ds}${path}?token=${token}`,
+    `${guac.url}/api/session/data/${guac.datasource}${path}?token=${token}`,
     {
       ...options,
       headers: {
@@ -47,11 +53,12 @@ async function guacFetch(path: string, options: RequestInit = {}) {
 }
 
 export async function createConnectionGroup(
+  guac: GuacamoleConfig,
   name: string,
   parentId = "ROOT"
 ): Promise<ServiceResult<{ identifier: string }>> {
   try {
-    const data = await guacFetch("/connectionGroups", {
+    const data = await guacFetch(guac, "/connectionGroups", {
       method: "POST",
       body: JSON.stringify({
         parentIdentifier: parentId,
@@ -71,6 +78,7 @@ export async function createConnectionGroup(
 }
 
 export async function createRdpConnection(
+  guac: GuacamoleConfig,
   name: string,
   hostname: string,
   port: number,
@@ -79,7 +87,7 @@ export async function createRdpConnection(
   groupId: string
 ): Promise<ServiceResult<{ identifier: string }>> {
   try {
-    const data = await guacFetch("/connections", {
+    const data = await guacFetch(guac, "/connections", {
       method: "POST",
       body: JSON.stringify({
         parentIdentifier: groupId,
@@ -144,10 +152,11 @@ export async function createRdpConnection(
 }
 
 export async function createUserGroup(
+  guac: GuacamoleConfig,
   name: string
 ): Promise<ServiceResult<{ identifier: string }>> {
   try {
-    await guacFetch("/userGroups", {
+    await guacFetch(guac, "/userGroups", {
       method: "POST",
       body: JSON.stringify({
         identifier: name,
@@ -161,12 +170,13 @@ export async function createUserGroup(
 }
 
 export async function createUser(
+  guac: GuacamoleConfig,
   username: string,
   password: string,
   formationName = ""
 ): Promise<ServiceResult> {
   try {
-    await guacFetch("/users", {
+    await guacFetch(guac, "/users", {
       method: "POST",
       body: JSON.stringify({
         username,
@@ -192,11 +202,12 @@ export async function createUser(
 }
 
 export async function addUserToGroup(
+  guac: GuacamoleConfig,
   username: string,
   groupName: string
 ): Promise<ServiceResult> {
   try {
-    await guacFetch(`/users/${encodeURIComponent(username)}/userGroups`, {
+    await guacFetch(guac, `/users/${encodeURIComponent(username)}/userGroups`, {
       method: "PATCH",
       body: JSON.stringify([
         { op: "add", path: "/", value: groupName },
@@ -209,6 +220,7 @@ export async function addUserToGroup(
 }
 
 export async function assignConnectionPermission(
+  guac: GuacamoleConfig,
   username: string,
   connectionId: string,
   connectionGroupId?: string
@@ -228,7 +240,7 @@ export async function assignConnectionPermission(
         value: "READ",
       });
     }
-    await guacFetch(`/users/${encodeURIComponent(username)}/permissions`, {
+    await guacFetch(guac, `/users/${encodeURIComponent(username)}/permissions`, {
       method: "PATCH",
       body: JSON.stringify(patches),
     });
@@ -238,9 +250,9 @@ export async function assignConnectionPermission(
   }
 }
 
-export async function deleteUser(username: string): Promise<ServiceResult> {
+export async function deleteUser(guac: GuacamoleConfig, username: string): Promise<ServiceResult> {
   try {
-    await guacFetch(`/users/${encodeURIComponent(username)}`, {
+    await guacFetch(guac, `/users/${encodeURIComponent(username)}`, {
       method: "DELETE",
     });
     return { success: true };
@@ -249,9 +261,9 @@ export async function deleteUser(username: string): Promise<ServiceResult> {
   }
 }
 
-export async function deleteUserGroup(name: string): Promise<ServiceResult> {
+export async function deleteUserGroup(guac: GuacamoleConfig, name: string): Promise<ServiceResult> {
   try {
-    await guacFetch(`/userGroups/${encodeURIComponent(name)}`, {
+    await guacFetch(guac, `/userGroups/${encodeURIComponent(name)}`, {
       method: "DELETE",
     });
     return { success: true };
@@ -260,9 +272,9 @@ export async function deleteUserGroup(name: string): Promise<ServiceResult> {
   }
 }
 
-export async function deleteConnection(id: string): Promise<ServiceResult> {
+export async function deleteConnection(guac: GuacamoleConfig, id: string): Promise<ServiceResult> {
   try {
-    await guacFetch(`/connections/${id}`, { method: "DELETE" });
+    await guacFetch(guac, `/connections/${id}`, { method: "DELETE" });
     return { success: true };
   } catch (e) {
     return { success: false, error: (e as Error).message };
@@ -270,11 +282,12 @@ export async function deleteConnection(id: string): Promise<ServiceResult> {
 }
 
 export async function findConnectionGroupByName(
+  guac: GuacamoleConfig,
   name: string,
   parentId = "ROOT"
 ): Promise<ServiceResult<{ identifier: string } | null>> {
   try {
-    const data = await guacFetch(`/connectionGroups`);
+    const data = await guacFetch(guac, `/connectionGroups`);
     const list = Array.isArray(data) ? data : Object.values(data ?? {});
     const match = (list as Array<{ identifier: string; name: string; parentIdentifier?: string }>).find(
       (g) => g.name === name && (g.parentIdentifier ?? "ROOT") === parentId
@@ -286,10 +299,11 @@ export async function findConnectionGroupByName(
 }
 
 export async function findUserGroupByName(
+  guac: GuacamoleConfig,
   name: string
 ): Promise<ServiceResult<{ identifier: string } | null>> {
   try {
-    const data = await guacFetch(`/userGroups`);
+    const data = await guacFetch(guac, `/userGroups`);
     const list = Array.isArray(data) ? data : Object.values(data ?? {});
     const match = (list as Array<{ identifier: string }>).find(
       (g) => g.identifier === name
@@ -300,20 +314,20 @@ export async function findUserGroupByName(
   }
 }
 
-export async function deleteConnectionGroup(id: string): Promise<ServiceResult> {
+export async function deleteConnectionGroup(guac: GuacamoleConfig, id: string): Promise<ServiceResult> {
   try {
-    await guacFetch(`/connectionGroups/${id}`, { method: "DELETE" });
+    await guacFetch(guac, `/connectionGroups/${id}`, { method: "DELETE" });
     return { success: true };
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
 }
 
-export async function ping(): Promise<ServiceResult> {
+export async function ping(guac: GuacamoleConfig): Promise<ServiceResult> {
   try {
-    await getToken();
+    await getToken(guac);
     return { success: true };
   } catch (e) {
-    return { success: false, error: (e as Error).message };
+    return { success: false, error: describeFetchError(e) };
   }
 }

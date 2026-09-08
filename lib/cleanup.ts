@@ -1,6 +1,7 @@
 import * as proxmox from "@/lib/services/proxmox";
 import * as guacamole from "@/lib/services/guacamole";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveInfraForFormation } from "@/lib/infra/groups";
 import type { Formation, FormationVm, ServiceResult } from "@/types";
 
 function logStep(step: string, target: string, result: ServiceResult, failures: string[]) {
@@ -35,6 +36,8 @@ export async function deleteFormation(formationId: string) {
 
   if (!formation) throw new Error("Formation not found");
   const f = formation as Formation;
+  const infra = await resolveInfraForFormation(f);
+  const guac = infra.guacamole;
 
   await supabase
     .from("formations")
@@ -54,7 +57,7 @@ export async function deleteFormation(formationId: string) {
     vmList
       .filter((vm) => vm.guac_username)
       .map(async (vm) => {
-        const r = await guacamole.deleteUser(vm.guac_username!);
+        const r = await guacamole.deleteUser(guac, vm.guac_username!);
         logStep("deleteUser", vm.guac_username!, r, failures);
       }),
     failures
@@ -62,7 +65,7 @@ export async function deleteFormation(formationId: string) {
 
   let userGroupId = f.guac_user_group;
   if (!userGroupId) {
-    const found = await guacamole.findUserGroupByName(`${f.name}_users`);
+    const found = await guacamole.findUserGroupByName(guac, `${f.name}_users`);
     if (found.success && found.data) {
       userGroupId = found.data.identifier;
       console.log(`[cleanup] user group fallback findByName=${userGroupId}`);
@@ -72,7 +75,7 @@ export async function deleteFormation(formationId: string) {
     }
   }
   if (userGroupId) {
-    const r = await guacamole.deleteUserGroup(userGroupId);
+    const r = await guacamole.deleteUserGroup(guac, userGroupId);
     logStep("deleteUserGroup", userGroupId, r, failures);
   } else {
     console.log(`[cleanup] no user group to delete`);
@@ -80,7 +83,7 @@ export async function deleteFormation(formationId: string) {
 
   let connGroupId = f.guac_connection_group_id;
   if (!connGroupId) {
-    const found = await guacamole.findConnectionGroupByName(`${f.name}_connections`);
+    const found = await guacamole.findConnectionGroupByName(guac, `${f.name}_connections`);
     if (found.success && found.data) {
       connGroupId = found.data.identifier;
       console.log(`[cleanup] conn group fallback findByName=${connGroupId}`);
@@ -90,12 +93,12 @@ export async function deleteFormation(formationId: string) {
     }
   }
   if (connGroupId) {
-    const r = await guacamole.deleteConnectionGroup(connGroupId);
+    const r = await guacamole.deleteConnectionGroup(guac, connGroupId);
     logStep("deleteConnectionGroup", connGroupId, r, failures);
     if (!r.success) {
       for (const vm of vmList) {
         if (vm.guac_connection_id) {
-          const cr = await guacamole.deleteConnection(vm.guac_connection_id);
+          const cr = await guacamole.deleteConnection(guac, vm.guac_connection_id);
           logStep("deleteConnection", vm.guac_connection_id, cr, failures);
         }
       }
@@ -107,7 +110,7 @@ export async function deleteFormation(formationId: string) {
   await settleAll(
     "deleteVm",
     vmList.map(async (vm) => {
-      const r = await proxmox.deleteVm(vm.vmid);
+      const r = await proxmox.deleteVm(infra.proxmox, vm.vmid);
       logStep("deleteVm", String(vm.vmid), r, failures);
     }),
     failures

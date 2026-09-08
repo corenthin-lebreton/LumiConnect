@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "probe:agent": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env tools/probe-agent.ts"
+    "probe:agent": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env tools/probe-agent.ts",
+    "seed:group": "tsx --env-file-if-exists=.env.local --env-file-if-exists=.env tools/seed-infra-group.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

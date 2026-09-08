@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { encryptSecret, generatePassword } from "@/lib/crypto";
 import { markStep } from "@/lib/progress";
 import type { StepDefinition } from "@/lib/progress";
-import type { Formation } from "@/types";
+import type { Formation, GuacamoleConfig } from "@/types";
 
 export const GUACAMOLE_STEPS: StepDefinition[] = [
   { step: "guacamole_conn", label: "Connexion Guacamole" },
@@ -29,6 +29,7 @@ function slugify(value: string): string {
 }
 
 export async function runGuacamoleStep(
+  guac: GuacamoleConfig,
   formation: Formation,
   vms: readonly GuacamoleVm[],
   vmPassword: string
@@ -57,8 +58,8 @@ export async function runGuacamoleStep(
     await updateVm(vmid, { status: "failed", error_message: error, ...patch });
   };
 
-  const groupResult = await guacamole.createConnectionGroup(`${formation.name}_connections`);
-  const userGroupResult = await guacamole.createUserGroup(`${formation.name}_users`);
+  const groupResult = await guacamole.createConnectionGroup(guac, `${formation.name}_connections`);
+  const userGroupResult = await guacamole.createUserGroup(guac, `${formation.name}_users`);
 
   if (!groupResult.success || !userGroupResult.success) {
     const error = groupResult.error ?? userGroupResult.error ?? "création des groupes échouée";
@@ -92,6 +93,7 @@ export async function runGuacamoleStep(
   for (const vm of vms) {
     await markStep(formation.id, vm.vmid, CONN_STEP, "running");
     const connection = await guacamole.createRdpConnection(
+      guac,
       `${formation.name}-${vm.vmid}`,
       vm.ip,
       formation.rdp_port,
@@ -112,7 +114,7 @@ export async function runGuacamoleStep(
     const password = generatePassword();
     const encrypted = encryptSecret(password);
 
-    const created = await guacamole.createUser(username, password, formation.name);
+    const created = await guacamole.createUser(guac, username, password, formation.name);
     if (!created.success) {
       await markVmFailed(vm.vmid, USER_STEP, created.error!, {
         guac_connection_id: connectionId,
@@ -126,13 +128,13 @@ export async function runGuacamoleStep(
       guac_connection_id: connectionId,
     };
 
-    const grouped = await guacamole.addUserToGroup(username, userGroupName);
+    const grouped = await guacamole.addUserToGroup(guac, username, userGroupName);
     if (!grouped.success) {
       await markVmFailed(vm.vmid, USER_STEP, `addUserToGroup : ${grouped.error}`, credentials);
       continue;
     }
 
-    const permitted = await guacamole.assignConnectionPermission(username, connectionId, groupId);
+    const permitted = await guacamole.assignConnectionPermission(guac, username, connectionId, groupId);
     if (!permitted.success) {
       await markVmFailed(
         vm.vmid,

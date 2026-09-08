@@ -8,6 +8,7 @@ import { StatusPill } from "@/components/formations/status-pill";
 import { DeploymentTrace } from "@/components/formations/deployment-trace";
 import { cn } from "@/lib/utils";
 import type { FormationStatus, VmStatus } from "@/types";
+import { loadInfraRow } from "@/lib/infra/groups";
 
 const vmTone: Record<VmStatus, { rail: string; text: string; label: string }> = {
   pending: { rail: "bg-muted-foreground/30", text: "text-muted-foreground", label: "En attente" },
@@ -32,6 +33,10 @@ export default async function FormationDetailPage({
     .single();
 
   if (!formation) notFound();
+
+  const groupName = formation.infra_group_id
+    ? (await loadInfraRow(formation.infra_group_id))?.name ?? null
+    : null;
 
   const { data: vmRows } = await supabase
     .from("formation_vms")
@@ -104,6 +109,12 @@ export default async function FormationDetailPage({
             label: "Template",
             value: String(formation.template_vmid),
             sub: formation.template_name ?? "nom non enregistré",
+          },
+          {
+            label: "Infrastructure",
+            value: groupName ?? "aucune",
+            tone: groupName ? "default" : "warning",
+            sub: groupName ? "groupe de déploiement" : "rattacher un groupe avant tout déploiement",
           },
         ]}
       />

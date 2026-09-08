@@ -3,6 +3,7 @@ import { deployFormation } from "@/lib/orchestrator";
 import { deleteFormation } from "@/lib/cleanup";
 import { claimJob, failStaleJobs, heartbeat, markFailed, markSucceeded } from "@/lib/queue";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveInfraForFormation } from "@/lib/infra/groups";
 import type { Formation, Job } from "@/types";
 
 const RUNNER_ID = `${hostname()}-${process.pid}`;
@@ -14,10 +15,6 @@ const REQUIRED_ENV = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "SUPABASE_SERVICE_ROLE_KEY",
   "LC_ENCRYPTION_KEY",
-  "PROXMOX_URL",
-  "PROXMOX_TOKEN_ID",
-  "PROXMOX_TOKEN_SECRET",
-  "PROXMOX_NODE",
 ];
 
 let shuttingDown = false;
@@ -63,7 +60,8 @@ async function runJob(job: Job): Promise<void> {
   try {
     if (job.kind === "deploy") {
       const formation = await loadFormation(job.formation_id);
-      const { failedVmids } = await deployFormation(formation);
+      const infra = await resolveInfraForFormation(formation);
+      const { failedVmids } = await deployFormation(formation, infra);
       log(
         failedVmids.length === 0
           ? `déploiement ${formation.name} terminé`

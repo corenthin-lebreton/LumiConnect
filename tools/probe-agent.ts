@@ -1,12 +1,28 @@
 import { runGuestScript, startVm, waitForAgent } from "@/lib/services/proxmox-agent";
 import { renderContextFile, type Shell } from "@/lib/scripts/escape";
+import { listInfraRows, toConfig } from "@/lib/infra/groups";
+import type { ProxmoxConfig } from "@/types";
 
 const REQUIRED_ENV = [
-  "PROXMOX_URL",
-  "PROXMOX_TOKEN_ID",
-  "PROXMOX_TOKEN_SECRET",
-  "PROXMOX_NODE",
+  "NEXT_PUBLIC_SUPABASE_URL",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "LC_ENCRYPTION_KEY",
 ] as const;
+
+async function selectProxmox(groupName: string | undefined): Promise<ProxmoxConfig> {
+  const rows = await listInfraRows();
+  if (rows.length === 0) fail("aucun groupe d'infrastructure : en créer un dans Paramètres");
+
+  const row = groupName ? rows.find((r) => r.name === groupName) : rows.length === 1 ? rows[0] : null;
+  if (!row) {
+    fail(
+      groupName
+        ? `groupe « ${groupName} » introuvable (disponibles : ${rows.map((r) => r.name).join(", ")})`
+        : `plusieurs groupes, préciser --group <nom> (disponibles : ${rows.map((r) => r.name).join(", ")})`
+    );
+  }
+  return toConfig(row).proxmox;
+}
 
 function fail(message: string): never {
   console.error(`\n  ÉCHEC — ${message}\n`);
@@ -23,12 +39,17 @@ async function main() {
     fail(`variables d'environnement manquantes : ${missing.join(", ")}`);
   }
 
-  const vmid = Number(process.argv[2]);
+  const args = process.argv.slice(2);
+  const groupIndex = args.indexOf("--group");
+  const groupName = groupIndex >= 0 ? args[groupIndex + 1] : undefined;
+  const positional = args.filter((_, i) => i !== groupIndex && i !== groupIndex + 1);
+
+  const vmid = Number(positional[0]);
   if (!Number.isInteger(vmid) || vmid <= 0) {
-    fail("usage : pnpm probe:agent <vmid>  (ex. pnpm probe:agent 201)");
+    fail("usage : pnpm probe:agent <vmid> [bash|powershell] [--group <nom>]  (ex. pnpm probe:agent 201)");
   }
 
-  const shell: Shell = (process.argv[3] as Shell) ?? "bash";
+  const shell: Shell = (positional[1] as Shell) ?? "bash";
   if (shell !== "bash" && shell !== "powershell") {
     fail(`shell inconnu : ${shell} (attendu « bash » ou « powershell »)`);
   }
@@ -38,16 +59,17 @@ async function main() {
   const sep = isWindows ? "\\" : "/";
   const ext = isWindows ? "ps1" : "sh";
 
-  console.log(`\n  Sonde guest agent — VM ${vmid}, shell ${shell}\n`);
+  const proxmox = await selectProxmox(groupName);
+  console.log(`\n  Sonde guest agent — VM ${vmid}, shell ${shell}, nœud ${proxmox.node}\n`);
 
   step("démarrage de la VM");
-  const started = await startVm(vmid);
+  const started = await startVm(proxmox, vmid);
   if (!started.success) fail(`startVm : ${started.error}`);
   console.log("ok");
 
   step("attente du guest agent");
   const agentTimeoutMs = Number(process.env.LC_AGENT_TIMEOUT_SEC ?? 600) * 1000;
-  const agent = await waitForAgent(vmid, agentTimeoutMs);
+  const agent = await waitForAgent(proxmox, vmid, agentTimeoutMs);
   if (!agent.success) fail(agent.error!);
   console.log("ok");
 
@@ -61,7 +83,7 @@ async function main() {
     : `mkdir -p '${dir}'\n`;
 
   const bootstrapPath = `${dir === "/opt/lumiconnect" ? "/tmp" : "C:\\Windows\\Temp"}${sep}lc-probe-bootstrap.${ext}`;
-  const bootstrap = await runGuestScript({
+  const bootstrap = await runGuestScript(proxmox, {
     vmid,
     shell,
     remotePath: bootstrapPath,
@@ -70,7 +92,7 @@ async function main() {
   });
   if (!bootstrap.success) fail(`création de ${dir} : ${bootstrap.error}`);
 
-  const writeContext = await runGuestScript({
+  const writeContext = await runGuestScript(proxmox, {
     vmid,
     shell,
     remotePath: contextPath,
@@ -85,7 +107,7 @@ async function main() {
     ? `. '${contextPath}'\r\nWrite-Output $env:LC_PROBE\r\nexit 0\r\n`
     : `. '${contextPath}'\nprintf '%s' "$LC_PROBE"\nexit 0\n`;
 
-  const run = await runGuestScript({
+  const run = await runGuestScript(proxmox, {
     vmid,
     shell,
     remotePath: `${dir}${sep}probe.${ext}`,
@@ -105,7 +127,7 @@ async function main() {
   console.log("ok");
 
   step("détection d'un code de sortie non nul");
-  const failing = await runGuestScript({
+  const failing = await runGuestScript(proxmox, {
     vmid,
     shell,
     remotePath: `${dir}${sep}probe-fail.${ext}`,

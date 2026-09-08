@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { markStep } from "@/lib/progress";
 import type { StepDefinition } from "@/lib/progress";
 import { mapWithConcurrency, readConcurrency } from "@/lib/pool";
-import type { Formation } from "@/types";
+import type { Formation, ProxmoxConfig } from "@/types";
 
 export const NETWORK_STEPS: StepDefinition[] = [{ step: "network", label: "Adresse IP" }];
 
@@ -16,6 +16,7 @@ export interface NetworkVm {
 }
 
 export async function runNetworkStep(
+  proxmox: ProxmoxConfig,
   formation: Formation,
   vms: readonly NetworkVm[],
   agentTimeoutMs: number
@@ -43,13 +44,13 @@ export async function runNetworkStep(
   await mapWithConcurrency(vms, NETWORK_CONCURRENCY, async (vm) => {
     await markStep(formation.id, vm.vmid, NETWORK_STEP, "running");
 
-    const started = await startVm(vm.vmid);
+    const started = await startVm(proxmox, vm.vmid);
     if (!started.success) return markVmFailed(vm.vmid, `démarrage : ${started.error}`);
 
-    const agent = await waitForAgent(vm.vmid, agentTimeoutMs);
+    const agent = await waitForAgent(proxmox, vm.vmid, agentTimeoutMs);
     if (!agent.success) return markVmFailed(vm.vmid, `guest agent : ${agent.error}`);
 
-    const ipResult = await getGuestIp(vm.vmid, vm.mac, agentTimeoutMs);
+    const ipResult = await getGuestIp(proxmox, vm.vmid, vm.mac, agentTimeoutMs);
     if (!ipResult.success) return markVmFailed(vm.vmid, `adresse IP : ${ipResult.error}`);
 
     const ip = ipResult.data!.ip;

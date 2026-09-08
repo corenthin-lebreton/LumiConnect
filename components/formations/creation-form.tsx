@@ -8,54 +8,17 @@ import { toast } from "sonner";
 import { formationSchema, type FormationFormData } from "@/lib/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { ArrowRight } from "lucide-react";
+import { FieldError, FieldLabel, Section } from "@/components/forms/field";
 import { TemplateCombobox } from "./template-combobox";
 import { ScriptPicker } from "./script-picker";
-import type { ProxmoxTemplate } from "@/types";
-
-function Section({
-  title,
-  description,
-  className = "",
-  children,
-}: {
-  title: string;
-  description?: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      className={`grid gap-x-8 gap-y-4 border-t border-line py-7 md:grid-cols-[14rem_1fr] ${className}`}
-    >
-      <div className="md:sticky md:top-[4.5rem] md:self-start">
-        <h2 className="display text-base">{title}</h2>
-        {description && (
-          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{description}</p>
-        )}
-      </div>
-      <div className="min-w-0">{children}</div>
-    </section>
-  );
-}
-
-function FieldLabel({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) {
-  return (
-    <Label htmlFor={htmlFor} className="eyebrow">
-      {children}
-    </Label>
-  );
-}
-
-function FieldError({ message, className = "mt-1" }: { message?: string; className?: string }) {
-  if (!message) return null;
-  return <p className={`text-xs text-destructive ${className}`}>{message}</p>;
-}
+import { InfraGroupSelect } from "./infra-group-select";
+import type { InfraGroupSummary, ProxmoxTemplate } from "@/types";
 
 export function CreationForm() {
   const router = useRouter();
+  const [groups, setGroups] = useState<InfraGroupSummary[] | null>(null);
   const [templates, setTemplates] = useState<ProxmoxTemplate[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -67,6 +30,7 @@ export function CreationForm() {
       template_vmid: 0,
       os_id: null,
       template_name: null,
+      infra_group_id: "",
       script_ids: [],
       vm_start_id: 200,
       vm_end_id: 210,
@@ -93,13 +57,51 @@ export function CreationForm() {
   }
 
   useEffect(() => {
-    fetch("/api/proxmox/templates")
+    fetch("/api/infra-groups")
       .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setTemplates(data);
-      })
-      .catch(() => toast.error("Impossible de charger les templates Proxmox"));
+      .then((data) => setGroups(Array.isArray(data) ? data : []))
+      .catch(() => {
+        setGroups([]);
+        toast.error("Impossible de charger les groupes d'infrastructure");
+      });
   }, []);
+
+  const groupId = watched.infra_group_id;
+
+  useEffect(() => {
+    if (!groupId) {
+      setTemplates([]);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/proxmox/templates?group_id=${encodeURIComponent(groupId)}`)
+      .then(async (r) => {
+        const data = await r.json();
+        if (cancelled) return;
+        if (!r.ok || !Array.isArray(data)) {
+          setTemplates([]);
+          toast.error(
+            typeof data?.error === "string" ? data.error : "Impossible de charger les templates Proxmox"
+          );
+          return;
+        }
+        setTemplates(data);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error("Impossible de charger les templates Proxmox");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [groupId]);
+
+  function selectGroup(id: string) {
+    form.setValue("infra_group_id", id, { shouldValidate: true });
+    form.setValue("template_vmid", 0);
+    form.setValue("os_id", null);
+    form.setValue("template_name", null);
+    form.setValue("script_ids", []);
+  }
 
   async function onSubmit(data: FormationFormData) {
     setLoading(true);
@@ -129,11 +131,20 @@ export function CreationForm() {
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
+      <Section
+        title="Groupe d'infrastructure"
+        description="Proxmox, pfSense et Guacamole sur lesquels cette formation sera déployée."
+      >
+        <InfraGroupSelect groups={groups} value={groupId} onChange={selectGroup} />
+        <FieldError message={form.formState.errors.infra_group_id?.message} className="mt-2" />
+      </Section>
+
       <Section title="Template Proxmox" description="Image source pour les clones linked." className="overflow-visible">
         <TemplateCombobox
           templates={templates}
           value={watched.template_vmid}
           onChange={selectTemplate}
+          disabled={!groupId}
         />
         <FieldError message={form.formState.errors.template_vmid?.message} className="mt-2" />
       </Section>
@@ -250,7 +261,12 @@ export function CreationForm() {
       <div className="grid gap-x-8 border-t border-line py-7 md:grid-cols-[14rem_1fr]">
         <p className="eyebrow hidden md:block">Validation</p>
         <div className="flex flex-wrap items-center gap-4">
-          <Button type="submit" size="lg" className="gap-1.5" disabled={loading}>
+          <Button
+            type="submit"
+            size="lg"
+            className="gap-1.5"
+            disabled={loading || groups === null || groups.length === 0}
+          >
             {loading ? "Création…" : "Créer la formation"}
             {!loading && <ArrowRight className="h-4 w-4" aria-hidden />}
           </Button>

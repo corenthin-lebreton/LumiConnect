@@ -1,8 +1,7 @@
-import type { ServiceResult } from "@/types";
+import type { ProxmoxConfig, ServiceResult } from "@/types";
 import type { Shell } from "@/lib/scripts/escape";
 import {
   POLL_INTERVAL_MS as AGENT_POLL_INTERVAL_MS,
-  PROXMOX_NODE,
   form,
   pveFetch,
   sleep,
@@ -11,11 +10,11 @@ import {
 const FILE_WRITE_MAX_CHARS = 61440;
 const TASK_TIMEOUT_MS = 120_000;
 
-async function waitForTask(upid: string, timeoutMs: number): Promise<void> {
+async function waitForTask(proxmox: ProxmoxConfig, upid: string, timeoutMs: number): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    const { data } = await pveFetch(
-      `/nodes/${PROXMOX_NODE}/tasks/${encodeURIComponent(upid)}/status`
+    const { data } = await pveFetch(proxmox, 
+      `/nodes/${proxmox.node}/tasks/${encodeURIComponent(upid)}/status`
     );
     if (data.status === "stopped") {
       if (data.exitstatus !== "OK") throw new Error(`Tâche échouée : ${data.exitstatus}`);
@@ -26,27 +25,27 @@ async function waitForTask(upid: string, timeoutMs: number): Promise<void> {
   throw new Error("Délai dépassé en attendant la fin de la tâche Proxmox");
 }
 
-export async function startVm(vmid: number): Promise<ServiceResult> {
+export async function startVm(proxmox: ProxmoxConfig, vmid: number): Promise<ServiceResult> {
   try {
-    const status = await pveFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/status/current`);
+    const status = await pveFetch(proxmox, `/nodes/${proxmox.node}/qemu/${vmid}/status/current`);
     if (status.data?.status === "running") return { success: true };
 
-    const res = await pveFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/status/start`, {
+    const res = await pveFetch(proxmox, `/nodes/${proxmox.node}/qemu/${vmid}/status/start`, {
       method: "POST",
     });
-    await waitForTask(res.data, TASK_TIMEOUT_MS);
+    await waitForTask(proxmox, res.data, TASK_TIMEOUT_MS);
     return { success: true };
   } catch (e) {
     return { success: false, error: (e as Error).message };
   }
 }
 
-export async function rebootVm(vmid: number): Promise<ServiceResult> {
+export async function rebootVm(proxmox: ProxmoxConfig, vmid: number): Promise<ServiceResult> {
   try {
-    const res = await pveFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/status/reboot`, {
+    const res = await pveFetch(proxmox, `/nodes/${proxmox.node}/qemu/${vmid}/status/reboot`, {
       method: "POST",
     });
-    await waitForTask(res.data, TASK_TIMEOUT_MS);
+    await waitForTask(proxmox, res.data, TASK_TIMEOUT_MS);
     return { success: true };
   } catch (e) {
     return { success: false, error: (e as Error).message };
@@ -54,6 +53,7 @@ export async function rebootVm(vmid: number): Promise<ServiceResult> {
 }
 
 export async function waitForAgent(
+  proxmox: ProxmoxConfig,
   vmid: number,
   timeoutMs: number
 ): Promise<ServiceResult> {
@@ -62,7 +62,7 @@ export async function waitForAgent(
 
   while (Date.now() - start < timeoutMs) {
     try {
-      await pveFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/agent/ping`, { method: "POST" });
+      await pveFetch(proxmox, `/nodes/${proxmox.node}/qemu/${vmid}/agent/ping`, { method: "POST" });
       return { success: true };
     } catch (e) {
       lastError = (e as Error).message;
@@ -79,6 +79,7 @@ export async function waitForAgent(
 }
 
 export async function getGuestIp(
+  proxmox: ProxmoxConfig,
   vmid: number,
   mac: string,
   timeoutMs: number
@@ -89,8 +90,8 @@ export async function getGuestIp(
 
   while (Date.now() - start < timeoutMs) {
     try {
-      const { data } = await pveFetch(
-        `/nodes/${PROXMOX_NODE}/qemu/${vmid}/agent/network-get-interfaces`
+      const { data } = await pveFetch(proxmox, 
+        `/nodes/${proxmox.node}/qemu/${vmid}/agent/network-get-interfaces`
       );
       const interfaces = (data?.result ?? []) as Array<{
         "hardware-address"?: string;
@@ -145,6 +146,7 @@ export function sanitizeForAgent(content: string): string {
 }
 
 export async function guestFileWrite(
+  proxmox: ProxmoxConfig,
   vmid: number,
   file: string,
   content: string
@@ -157,8 +159,8 @@ export async function guestFileWrite(
     };
   }
   try {
-    await pveFetch(
-      `/nodes/${PROXMOX_NODE}/qemu/${vmid}/agent/file-write`,
+    await pveFetch(proxmox, 
+      `/nodes/${proxmox.node}/qemu/${vmid}/agent/file-write`,
       form({ file, content: sanitized })
     );
     return { success: true };
@@ -168,6 +170,7 @@ export async function guestFileWrite(
 }
 
 async function guestExec(
+  proxmox: ProxmoxConfig,
   vmid: number,
   command: string[]
 ): Promise<ServiceResult<{ pid: number }>> {
@@ -175,7 +178,7 @@ async function guestExec(
     const params = new URLSearchParams();
     for (const arg of command) params.append("command", arg);
 
-    const res = await pveFetch(`/nodes/${PROXMOX_NODE}/qemu/${vmid}/agent/exec`, form(params));
+    const res = await pveFetch(proxmox, `/nodes/${proxmox.node}/qemu/${vmid}/agent/exec`, form(params));
     return { success: true, data: { pid: res.data.pid } };
   } catch (e) {
     return { success: false, error: (e as Error).message };
@@ -191,12 +194,13 @@ interface GuestExecResult {
 }
 
 async function guestExecStatus(
+  proxmox: ProxmoxConfig,
   vmid: number,
   pid: number
 ): Promise<ServiceResult<GuestExecResult>> {
   try {
-    const { data } = await pveFetch(
-      `/nodes/${PROXMOX_NODE}/qemu/${vmid}/agent/exec-status?pid=${pid}`
+    const { data } = await pveFetch(proxmox, 
+      `/nodes/${proxmox.node}/qemu/${vmid}/agent/exec-status?pid=${pid}`
     );
     return {
       success: true,
@@ -248,6 +252,7 @@ function interpreterCommand(shell: Shell, remotePath: string): string[] {
 }
 
 async function waitForExec(
+  proxmox: ProxmoxConfig,
   vmid: number,
   pid: number,
   timeoutMs: number,
@@ -256,7 +261,7 @@ async function waitForExec(
   const start = Date.now();
 
   while (Date.now() - start < timeoutMs) {
-    const status = await guestExecStatus(vmid, pid);
+    const status = await guestExecStatus(proxmox, vmid, pid);
     if (!status.success) return { success: false, error: `exec-status pid=${pid} : ${status.error}` };
 
     const result = status.data!;
@@ -291,26 +296,28 @@ async function waitForExec(
 }
 
 export async function runGuestCommand(
+  proxmox: ProxmoxConfig,
   vmid: number,
   command: string[],
   timeoutMs: number
 ): Promise<ServiceResult<RunScriptOutcome>> {
-  const exec = await guestExec(vmid, command);
+  const exec = await guestExec(proxmox, vmid, command);
   if (!exec.success) return { success: false, error: `exec : ${exec.error}` };
 
-  return waitForExec(vmid, exec.data!.pid, timeoutMs, command[0]);
+  return waitForExec(proxmox, vmid, exec.data!.pid, timeoutMs, command[0]);
 }
 
 export async function runGuestScript(
+  proxmox: ProxmoxConfig,
   options: RunScriptOptions
 ): Promise<ServiceResult<RunScriptOutcome>> {
   const { vmid, shell, remotePath, timeoutMs } = options;
 
-  const write = await guestFileWrite(vmid, remotePath, options.content);
+  const write = await guestFileWrite(proxmox, vmid, remotePath, options.content);
   if (!write.success) return { success: false, error: `écriture ${remotePath} : ${write.error}` };
 
-  const exec = await guestExec(vmid, interpreterCommand(shell, remotePath));
+  const exec = await guestExec(proxmox, vmid, interpreterCommand(shell, remotePath));
   if (!exec.success) return { success: false, error: `exec ${remotePath} : ${exec.error}` };
 
-  return waitForExec(vmid, exec.data!.pid, timeoutMs, remotePath);
+  return waitForExec(proxmox, vmid, exec.data!.pid, timeoutMs, remotePath);
 }
