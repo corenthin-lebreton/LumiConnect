@@ -1,17 +1,16 @@
 import type { NextConfig } from "next";
-
-const PROD_HOST = "auto.fwx.pm";
+import { allowedOrigins } from "./lib/origins";
 
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   reactStrictMode: true,
 
-  allowedDevOrigins: ["192.168.153.128", PROD_HOST],
+  allowedDevOrigins: allowedOrigins(),
 
   experimental: {
     serverActions: {
-      allowedOrigins: [PROD_HOST, "localhost:3000"],
+      allowedOrigins: allowedOrigins(),
     },
   },
 

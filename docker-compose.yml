@@ -6,8 +6,32 @@ services:
       args:
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-    env_file: .env.local
+        NEXT_PUBLIC_APP_ORIGIN: ${NEXT_PUBLIC_APP_ORIGIN}
+    env_file:
+      - path: .env
+        required: false
+      - path: .env.local
+        required: false
     ports:
       - "${APP_PORT:-8002}:8002"
     restart: unless-stopped
+    # L'arret laisse la boucle de jobs terminer un deploiement en cours.
     stop_grace_period: 120s
+
+    # Durcissement : aucune elevation de privileges, aucune capability, systeme de
+    # fichiers en lecture seule. L'application n'ecrit sur disque nulle part ; les
+    # deux tmpfs couvrent les fichiers temporaires de Node et le cache Next.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m,mode=1777
+      - /app/.next/cache:rw,nosuid,size=64m,mode=1777
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

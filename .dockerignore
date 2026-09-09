@@ -1,0 +1,43 @@
+# Contexte de build : tout ce qui n'entre pas dans l'image.
+# Reduit la taille du contexte et evite d'y exposer des secrets.
+
+# dependances et artefacts locaux
+node_modules
+**/node_modules
+.next
+out
+build
+dist
+coverage
+*.tsbuildinfo
+
+# secrets et configuration locale
+.env
+.env.*
+*.pem
+!lib/services/pfsense-ca.pem
+
+# outillage de developpement
+.git
+.gitignore
+.github
+.vscode
+.claude
+.remember
+graphify-out
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# non necessaire au build de l'application
+supabase
+tools
+**/*.test.ts
+**/*.test.tsx
+vitest.config.mts
+eslint.config.mjs
+README.md
+CLAUDE.md
+PLAN.md
+npm-debug.log*
+pnpm-debug.log*

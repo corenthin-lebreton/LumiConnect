@@ -91,6 +91,64 @@ Le script crée le groupe, y rattache les formations existantes, reprend
 En production, `docker compose up -d --build` construit et lance l'application seule, sans
 service additionnel.
 
+## Déploiement derrière Pangolin (HTTPS)
+
+L'application ne sert que son propre domaine : toutes les routes `/api` sont appelées par
+l'interface elle-même et exigent une session Supabase, il n'y a donc pas d'en-têtes CORS à
+poser. Ce qui doit être exact, c'est l'**origine publique** — Next vérifie l'en-tête `Origin`
+des Server Actions, et les redirections d'authentification sont construites à partir d'elle.
+
+Une seule variable la pilote, `NEXT_PUBLIC_APP_ORIGIN` (schéma + hôte, sans slash final) :
+
+| Environnement | Valeur |
+| --- | --- |
+| Production | `https://lumiconnect.fwx.pm` |
+| Développement | `http://192.168.1.240:3000` |
+
+Hors production, `localhost:3000`, `127.0.0.1:3000` et `192.168.1.240` sont autorisés
+d'office ; `LC_DEV_ORIGINS` ajoute d'autres hôtes (`hote[:port]`, séparés par des virgules).
+En production, seule l'origine déclarée est acceptée. La liste vit dans `lib/origins.ts` et
+alimente `allowedDevOrigins` et `experimental.serverActions.allowedOrigins`.
+
+`NEXT_PUBLIC_*` est inliné dans le bundle au moment du build : la valeur doit être fournie à
+la construction de l'image, pas seulement au démarrage du conteneur.
+
+```bash
+NEXT_PUBLIC_APP_ORIGIN=https://lumiconnect.fwx.pm docker compose up -d --build
+```
+
+Côté Pangolin, la ressource pointe sur le conteneur, port `8002`, et doit transmettre :
+
+- `X-Forwarded-Proto: https`
+- `X-Forwarded-Host: lumiconnect.fwx.pm`
+
+Côté Supabase (dashboard, **Authentication → URL Configuration**) : `Site URL` =
+`https://lumiconnect.fwx.pm`, et `https://lumiconnect.fwx.pm/**` dans les *Redirect URLs*.
+`NEXT_PUBLIC_SUPABASE_URL` doit être en `https://` : le suivi de déploiement ouvre un
+WebSocket Realtime direct vers Supabase, hors reverse proxy, qu'un navigateur bloquerait en mixed
+content depuis une page HTTPS.
+
+En production, les cookies de session sont posés avec `Secure` et `SameSite=Lax`, et l'en-tête
+`Strict-Transport-Security` est ajouté (`next.config.ts`).
+
+## Image Docker
+
+Build en quatre étapes (`base`, `deps`, `builder`, `runner`) : seule la dernière est publiée.
+Elle ne contient ni pnpm, ni npm, ni sources, ni dépendances de développement — uniquement la
+sortie `standalone` de Next, ses assets et `scripts/`.
+
+Durcissement :
+
+- processus non root (`nextjs`, uid 1001), shell `/sbin/nologin` ;
+- code applicatif propriété de `root` en lecture seule : le service ne peut pas se réécrire ;
+- `npm`/`npx` retirés de l'image finale, healthcheck assuré par le `fetch` natif de Node
+  (aucun client HTTP supplémentaire installé) ;
+- `apk upgrade` sur les deux images de base, `tini` comme PID 1 pour propager `SIGTERM` ;
+- conteneur en `read_only` avec `cap_drop: ALL` et `no-new-privileges`, deux `tmpfs` pour
+  `/tmp` et `/app/.next/cache` (`docker-compose.yml`) ;
+- `.dockerignore` tient `.env*`, `.git` et `node_modules` hors du contexte de build : aucun
+  secret ne peut se retrouver dans une couche.
+
 ## Premier compte administrateur
 
 La gestion des comptes (page Utilisateurs) est réservée aux membres portant le rôle admin. Ce
