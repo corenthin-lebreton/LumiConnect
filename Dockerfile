@@ -31,7 +31,8 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store,sharing=locked \
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY next.config.ts tsconfig.json next-env.d.ts postcss.config.mjs proxy.ts instrumentation.ts ./
+# next-env.d.ts n'est pas versionne (gitignore) : Next le regenere au build.
+COPY next.config.ts tsconfig.json postcss.config.mjs proxy.ts instrumentation.ts ./
 COPY app ./app
 COPY components ./components
 COPY lib ./lib
