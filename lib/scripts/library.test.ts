@@ -34,24 +34,36 @@ describe("bibliothèque de scripts — syntaxe", () => {
     }
   });
 
-  it.runIf(HAS_PWSH)("chaque script PowerShell parse", async () => {
-    for (const osId of OS_IDS) {
-      const registry = await loadRegistry(osId);
-      if (registry.shell !== "powershell") continue;
+  // Un démarrage de pwsh coûte une à deux secondes : les scripts sont analysés en parallèle,
+  // et le délai par défaut de 5 s ne suffit pas là où pwsh est installé (runners CI).
+  it.runIf(HAS_PWSH)(
+    "chaque script PowerShell parse",
+    async () => {
+      for (const osId of OS_IDS) {
+        const registry = await loadRegistry(osId);
+        if (registry.shell !== "powershell") continue;
 
-      for (const entry of registry.scripts) {
-        const file = resolveScriptPath(registry, entry);
-        const { stdout } = await run("pwsh", [
-          "-NoProfile",
-          "-Command",
-          `$e = $null
-           $null = [System.Management.Automation.Language.Parser]::ParseFile('${file}', [ref]$null, [ref]$e)
-           if ($e -and $e.Count -gt 0) { $e | ForEach-Object { $_.Message } } else { 'OK' }`,
-        ]);
-        expect(stdout.trim(), `${osId}/${entry.id}`).toBe("OK");
+        const parsed = await Promise.all(
+          registry.scripts.map(async (entry) => {
+            const file = resolveScriptPath(registry, entry);
+            const { stdout } = await run("pwsh", [
+              "-NoProfile",
+              "-Command",
+              `$e = $null
+               $null = [System.Management.Automation.Language.Parser]::ParseFile('${file}', [ref]$null, [ref]$e)
+               if ($e -and $e.Count -gt 0) { $e | ForEach-Object { $_.Message } } else { 'OK' }`,
+            ]);
+            return { id: entry.id, output: stdout.trim() };
+          })
+        );
+
+        for (const { id, output } of parsed) {
+          expect(output, `${osId}/${id}`).toBe("OK");
+        }
       }
-    }
-  });
+    },
+    120_000
+  );
 });
 
 describe("bibliothèque de scripts — conventions", () => {
