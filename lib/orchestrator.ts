@@ -283,7 +283,13 @@ export async function deployFormation(formation: Formation, infra: InfraConfig) 
       });
       if (!configured.ok) return failVm(vm, configured.failedStep!, configured.error!);
 
-      const rebooted = await rebootAndWait(infra.proxmox, formation.id, vm.vmid, AGENT_TIMEOUT_MS);
+      const rebooted = await rebootAndWait(
+        infra.proxmox,
+        formation.id,
+        vm.vmid,
+        selection!.registry.shell,
+        AGENT_TIMEOUT_MS
+      );
       if (!rebooted.ok) return failVm(vm, "reboot", rebooted.error);
     }
 

@@ -47,6 +47,9 @@ export async function getTemplates(proxmox: ProxmoxConfig): Promise<ServiceResul
 }
 
 const LOCK_ERROR = /lock|locked|timeout/i;
+// Proxmox repond 500, pas 404, pour une VM absente : « Configuration file
+// 'nodes/pve/qemu-server/5000.conf' does not exist ». Le message est le seul discriminant.
+const MISSING_VM_ERROR = /does not exist|no such vm/i;
 const CLONE_ATTEMPTS = 5;
 const CLONE_RETRY_DELAY_MS = 3000;
 
@@ -180,6 +183,18 @@ export async function convertToTemplate(proxmox: ProxmoxConfig, vmid: number): P
   }
 }
 
+// Une VM absente n'est pas une erreur pour qui cherche a la supprimer : la base peut decrire
+// des VM jamais creees (les lignes formation_vms sont ecrites avant le clonage).
+async function vmExists(proxmox: ProxmoxConfig, vmid: number): Promise<boolean> {
+  try {
+    await pveFetch(proxmox, `/nodes/${proxmox.node}/qemu/${vmid}/status/current`);
+    return true;
+  } catch (e) {
+    if (MISSING_VM_ERROR.test((e as Error).message)) return false;
+    throw e;
+  }
+}
+
 async function stopVm(proxmox: ProxmoxConfig, vmid: number): Promise<ServiceResult> {
   try {
     const statusRes = await pveFetch(proxmox, `/nodes/${proxmox.node}/qemu/${vmid}/status/current`);
@@ -198,6 +213,8 @@ async function stopVm(proxmox: ProxmoxConfig, vmid: number): Promise<ServiceResu
 
 export async function deleteVm(proxmox: ProxmoxConfig, vmid: number): Promise<ServiceResult> {
   try {
+    if (!(await vmExists(proxmox, vmid))) return { success: true };
+
     const stopResult = await stopVm(proxmox, vmid);
     if (!stopResult.success) {
       console.error(`[proxmox] stopVm failed vmid=${vmid}, aborting delete:`, stopResult.error);
@@ -206,6 +223,8 @@ export async function deleteVm(proxmox: ProxmoxConfig, vmid: number): Promise<Se
     await pveFetch(proxmox, `/nodes/${proxmox.node}/qemu/${vmid}`, { method: "DELETE" });
     return { success: true };
   } catch (e) {
+    // Deux nettoyages concurrents : le second trouve la VM deja supprimee.
+    if (MISSING_VM_ERROR.test((e as Error).message)) return { success: true };
     return { success: false, error: (e as Error).message };
   }
 }

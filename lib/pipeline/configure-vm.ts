@@ -1,11 +1,12 @@
 import {
   guestFileWrite,
-  rebootVm,
   runGuestCommand,
   runGuestScript,
   startVm,
   waitForAgent,
 } from "@/lib/services/proxmox-agent";
+import { restartGuest, settleAfterBoot } from "@/lib/pipeline/reboot-step";
+import { PENDING_REBOOT_COMMAND, parsePendingReboot } from "@/lib/pipeline/pending-reboot";
 import { renderContextFile, type Shell } from "@/lib/scripts/escape";
 import { loadScriptContent, type ScriptEntry, type ScriptRegistry } from "@/lib/scripts/registry";
 import { markStep } from "@/lib/progress";
@@ -104,9 +105,6 @@ export interface ConfigureVmResult {
 
 const COMMAND_TIMEOUT_MS = 60_000;
 
-const AGENT_SETTLE_MS = Number(process.env.LC_AGENT_SETTLE_SEC ?? 90) * 1000;
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
-
 export async function configureVm(options: ConfigureVmOptions): Promise<ConfigureVmResult> {
   const { proxmox, formationId, vmid, registry, entries, agentTimeoutMs } = options;
   const shell = registry.shell;
@@ -126,9 +124,7 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
   const agent = await waitForAgent(proxmox, vmid, agentTimeoutMs);
   if (!agent.success) return fail(AGENT_STEP, agent.error!);
   await markStep(formationId, vmid, AGENT_STEP, "success");
-  // Le ping répond avant que l'agent Windows soit fiable pour exec pendant le boot storm.
-  // L'agent Linux, lui, est prêt dès le premier ping.
-  if (shell === "powershell") await sleep(AGENT_SETTLE_MS);
+  await settleAfterBoot(shell);
 
   await markStep(formationId, vmid, CONTEXT_STEP, "running");
 
@@ -167,10 +163,41 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
   }
   await markStep(formationId, vmid, CONTEXT_STEP, "success");
 
+  // Renvoie un message d'erreur, ou null quand la machine est prête à installer.
+  const clearPendingReboot = async (scriptId: string): Promise<string | null> => {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const probe = await runGuestCommand(proxmox, vmid, PENDING_REBOOT_COMMAND, COMMAND_TIMEOUT_MS);
+      if (!probe.success) return `détection du redémarrage en attente : ${probe.error}`;
+
+      let pending: boolean;
+      try {
+        pending = parsePendingReboot(probe.data!.stdout);
+      } catch (e) {
+        return (e as Error).message;
+      }
+      if (!pending) return null;
+
+      if (attempt > 0) {
+        return `un redémarrage Windows reste en attente après redémarrage, ${scriptId} ne peut pas s'installer`;
+      }
+
+      console.log(`[configure] vmid=${vmid} redémarrage en attente avant ${scriptId}`);
+      const restarted = await restartGuest(proxmox, vmid, shell, agentTimeoutMs);
+      if (!restarted.success) return `redémarrage avant ${scriptId} : ${restarted.error}`;
+    }
+
+    return null;
+  };
+
   const runScripts = async (): Promise<ConfigureVmResult> => {
     for (const entry of entries) {
       const step = scriptStep(entry.id);
       await markStep(formationId, vmid, step, "running");
+
+      if (entry.reboot_if_pending && shell === "powershell") {
+        const blocked = await clearPendingReboot(entry.id);
+        if (blocked) return fail(step, blocked);
+      }
 
       let content: string;
       try {
@@ -204,14 +231,9 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
       });
 
       if (entry.reboot_after) {
-        const rebooted = await rebootVm(proxmox, vmid);
-        if (!rebooted.success) {
-          return fail(step, `redémarrage après ${entry.id} : ${rebooted.error}`);
-        }
-
-        const backUp = await waitForAgent(proxmox, vmid, agentTimeoutMs);
-        if (!backUp.success) {
-          return fail(step, `guest agent après redémarrage : ${backUp.error}`);
+        const restarted = await restartGuest(proxmox, vmid, shell, agentTimeoutMs);
+        if (!restarted.success) {
+          return fail(step, `redémarrage après ${entry.id} : ${restarted.error}`);
         }
       }
     }

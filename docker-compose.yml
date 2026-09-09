@@ -1,26 +1,28 @@
 services:
   web:
-    build:
-      context: .
-      target: runner
-      args:
-        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-        NEXT_PUBLIC_APP_ORIGIN: ${NEXT_PUBLIC_APP_ORIGIN}
-    env_file:
-      - path: .env
-        required: false
-      - path: .env.local
-        required: false
+    # Image publiee par le workflow GitHub Actions (.github/workflows/docker-publish.yml).
+    # IMAGE_TAG epingle une version precise : IMAGE_TAG=1.2 docker compose up -d
+    image: firewax/lumiconnect:${IMAGE_TAG:-latest}
+    pull_policy: always
+
+    # Variables indispensables : le deploiement echoue si l'une manque, plutot que
+    # de lancer une application sans acces a Supabase.
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?variable manquante}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?variable manquante}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?variable manquante}
+      LC_ENCRYPTION_KEY: ${LC_ENCRYPTION_KEY:?variable manquante}
+
     ports:
       - "${APP_PORT:-8002}:8002"
     restart: unless-stopped
+
     # L'arret laisse la boucle de jobs terminer un deploiement en cours.
     stop_grace_period: 120s
 
     # Durcissement : aucune elevation de privileges, aucune capability, systeme de
-    # fichiers en lecture seule. L'application n'ecrit sur disque nulle part ; les
-    # deux tmpfs couvrent les fichiers temporaires de Node et le cache Next.
+    # fichiers en lecture seule. Les deux tmpfs couvrent les fichiers temporaires
+    # de Node et le cache Next.
     security_opt:
       - no-new-privileges:true
     cap_drop:

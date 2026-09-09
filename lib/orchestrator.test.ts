@@ -3,7 +3,16 @@ import { splitEntries } from "@/lib/orchestrator";
 import type { ScriptEntry } from "@/lib/scripts/registry";
 
 function entry(id: string, per_vm = false): ScriptEntry {
-  return { id, label: id, mandatory: false, requires: [], timeout_sec: 60, reboot_after: false, per_vm };
+  return {
+    id,
+    label: id,
+    mandatory: false,
+    requires: [],
+    timeout_sec: 60,
+    reboot_after: false,
+    reboot_if_pending: false,
+    per_vm,
+  };
 }
 
 describe("splitEntries", () => {

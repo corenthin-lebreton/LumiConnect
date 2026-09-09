@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cloneVm, nextVmid } from "./proxmox";
+import { cloneVm, deleteVm, nextVmid } from "./proxmox";
 import type { ProxmoxConfig } from "@/types";
 
 const proxmox: ProxmoxConfig = { url: "https://pve", node: "pve", tokenId: "t@pve!x", tokenSecret: "s" };
@@ -86,5 +86,78 @@ describe("nextVmid", () => {
   it("lit l'identifiant proposé par le cluster", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => json({ data: "412" })));
     expect(await nextVmid(proxmox)).toEqual({ success: true, data: 412 });
+  });
+});
+
+describe("deleteVm", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  // Proxmox repond 500 pour une VM absente : sans cette tolerance, la suppression d'une
+  // formation dont une VM n'a jamais ete creee echoue indefiniment.
+  it("considère une VM absente comme déjà supprimée, sans appeler DELETE", async () => {
+    const methods: string[] = [];
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      methods.push(`${init?.method ?? "GET"} ${url}`);
+      if (url.endsWith("/status/current")) {
+        return new Response(
+          JSON.stringify({
+            data: null,
+            message: "Configuration file 'nodes/pve/qemu-server/5000.conf' does not exist\n",
+          }),
+          { status: 500 }
+        );
+      }
+      throw new Error(`appel inattendu ${url}`);
+    });
+
+    const result = await deleteVm(proxmox, 5000);
+
+    expect(result).toEqual({ success: true });
+    expect(methods.some((call) => call.startsWith("DELETE"))).toBe(false);
+  });
+
+  it("arrête puis supprime une VM en marche", async () => {
+    const methods: string[] = [];
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      methods.push(`${init?.method ?? "GET"} ${url}`);
+      if (url.endsWith("/status/current")) return json({ data: { status: "running" } });
+      if (url.endsWith("/status/stop")) return json({ data: "UPID:stop" });
+      if (url.endsWith("/tasks/UPID%3Astop/status")) {
+        return json({ data: { status: "stopped", exitstatus: "OK" } });
+      }
+      if (init?.method === "DELETE") return json({ data: null });
+      throw new Error(`appel inattendu ${url}`);
+    });
+
+    const pending = deleteVm(proxmox, 201);
+    await vi.runAllTimersAsync();
+
+    expect(await pending).toEqual({ success: true });
+    expect(methods.filter((call) => call.startsWith("DELETE"))).toHaveLength(1);
+  });
+
+  it("remonte une erreur qui n'est pas une VM absente", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url.endsWith("/status/current")) {
+        return new Response(JSON.stringify({ data: null, message: "permission denied" }), { status: 403 });
+      }
+      throw new Error(`appel inattendu ${url}`);
+    });
+
+    const result = await deleteVm(proxmox, 201);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/permission denied/);
   });
 });

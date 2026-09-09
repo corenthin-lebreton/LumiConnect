@@ -117,6 +117,8 @@ jobs:
         run: |
           set -euo pipefail
           version="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "v${version}" -m "Image ${{ env.IMAGE }}:${version}"
           git push origin "v${version}"
 

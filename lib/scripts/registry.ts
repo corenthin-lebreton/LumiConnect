@@ -18,6 +18,7 @@ const scriptEntrySchema = z.object({
   requires: z.array(z.string()).default([]),
   timeout_sec: z.number().int().positive().max(7200).default(900),
   reboot_after: z.boolean().default(false),
+  reboot_if_pending: z.boolean().default(false),
   per_vm: z.boolean().default(false),
   file: z.string().optional(),
 });

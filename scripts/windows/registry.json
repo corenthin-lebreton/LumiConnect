@@ -28,7 +28,8 @@
       "label": "SQL Server Developer",
       "description": "SQL Server 2025 Developer, instance SQLEXPRESS, authentification mixte. Le compte du stagiaire est sysadmin, le mot de passe sa est celui de sa session. Édition Developer, sans plafond de taille de base ni de RAM.",
       "requires": ["choco"],
-      "timeout_sec": 3600
+      "timeout_sec": 3600,
+      "reboot_if_pending": true
     },
     {
       "id": "ssms",
