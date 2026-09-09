@@ -3,7 +3,7 @@ ARG PNPM_VERSION=10.6.5
 ARG ALPINE_VERSION=3.20
 
 
-# --- base : node + pnpm, uniquement pour construire -------------------------
+# --- base : node + pnpm, uniquement pour costruire -------------------------
 FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS base
 ARG PNPM_VERSION
 ENV PNPM_HOME=/pnpm \
