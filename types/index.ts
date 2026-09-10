@@ -93,6 +93,8 @@ export interface ProxmoxConfig {
   node: string;
   tokenId: string;
   tokenSecret: string;
+  caPem: string | null;
+  insecureTls: boolean;
 }
 
 export interface PfsenseConfig {
@@ -124,6 +126,8 @@ export interface InfraGroupRow {
   proxmox_node: string;
   proxmox_token_id: string;
   proxmox_token_secret: string;
+  proxmox_ca_pem: string | null;
+  proxmox_insecure_tls: boolean;
   pfsense_url: string;
   pfsense_api_key: string;
   pfsense_ca_pem: string | null;

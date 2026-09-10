@@ -10,6 +10,8 @@ const row: InfraGroupRow = {
   proxmox_node: "pve",
   proxmox_token_id: "lumiconnect@pve!deploy",
   proxmox_token_secret: "secret-proxmox",
+  proxmox_ca_pem: null,
+  proxmox_insecure_tls: false,
   pfsense_url: "https://192.168.1.1",
   pfsense_api_key: "cle-pfsense",
   pfsense_ca_pem: null,

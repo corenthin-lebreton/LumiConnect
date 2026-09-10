@@ -43,6 +43,18 @@ const proxmoxUrl = httpUrl("URL Proxmox invalide (http ou https)").refine(
 
 const secret = (message: string) => z.string().min(1, message).max(4000);
 
+const caPem = z
+  .string()
+  .trim()
+  .max(20000)
+  .refine(
+    (value) => value === "" || value.startsWith("-----BEGIN CERTIFICATE-----"),
+    "Certificat PEM attendu (-----BEGIN CERTIFICATE-----)"
+  )
+  .transform((value) => (value === "" ? null : value))
+  .nullable()
+  .default(null);
+
 const infraGroupFields = {
   name: z.string().trim().min(1, "Nom requis").max(100),
   proxmox_url: proxmoxUrl,
@@ -54,18 +66,10 @@ const infraGroupFields = {
     .string()
     .trim()
     .regex(/^[^@\s!]+@[^@\s!]+![^@\s!]+$/, "Forme attendue : user@realm!nomdutoken"),
+  proxmox_ca_pem: caPem,
+  proxmox_insecure_tls: z.boolean().default(false),
   pfsense_url: httpUrl("URL pfSense invalide (http ou https)"),
-  pfsense_ca_pem: z
-    .string()
-    .trim()
-    .max(20000)
-    .refine(
-      (value) => value === "" || value.startsWith("-----BEGIN CERTIFICATE-----"),
-      "Certificat PEM attendu (-----BEGIN CERTIFICATE-----)"
-    )
-    .transform((value) => (value === "" ? null : value))
-    .nullable()
-    .default(null),
+  pfsense_ca_pem: caPem,
   pfsense_insecure_tls: z.boolean().default(false),
   guacamole_url: httpUrl("URL Guacamole invalide (http ou https)"),
   guacamole_datasource: z

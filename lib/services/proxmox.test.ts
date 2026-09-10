@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cloneVm, deleteVm, nextVmid } from "./proxmox";
 import type { ProxmoxConfig } from "@/types";
 
-const proxmox: ProxmoxConfig = { url: "https://pve", node: "pve", tokenId: "t@pve!x", tokenSecret: "s" };
+const proxmox: ProxmoxConfig = {
+  url: "https://pve",
+  node: "pve",
+  tokenId: "t@pve!x",
+  tokenSecret: "s",
+  caPem: null,
+  insecureTls: false,
+};
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status });

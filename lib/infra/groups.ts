@@ -38,6 +38,8 @@ export function toConfig(row: InfraGroupRow): InfraConfig {
       node: row.proxmox_node,
       tokenId: row.proxmox_token_id,
       tokenSecret: decryptSecret(row.proxmox_token_secret),
+      caPem: row.proxmox_ca_pem,
+      insecureTls: row.proxmox_insecure_tls,
     },
     pfsense: {
       url: row.pfsense_url,

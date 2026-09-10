@@ -3,8 +3,7 @@ import { describeFetchError } from "@/lib/services/fetch-error";
 
 const TOKEN_TTL_MS = 10 * 60 * 1000;
 
-// Un token par serveur et par compte : deux groupes pointant sur des Guacamole différents ne
-// doivent jamais se partager une session.
+
 const tokenCache = new Map<string, { value: string; expiresAt: number }>();
 
 function cacheKey(guac: GuacamoleConfig): string {

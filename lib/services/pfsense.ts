@@ -1,28 +1,16 @@
-import { X509Certificate } from "node:crypto";
-import { Agent, fetch as undiciFetch } from "undici";
+import type { Agent } from "undici";
+import { fetch as undiciFetch } from "undici";
 import type { PfsenseConfig, ServiceResult } from "@/types";
 import { describeFetchError } from "@/lib/services/fetch-error";
+import { tlsAgent } from "@/lib/services/tls";
 
 const PROBE_TIMEOUT_MS = 10_000;
 
-function dispatcherFor(pfsense: PfsenseConfig): Agent {
-  if (pfsense.insecureTls) {
-    return new Agent({ connect: { rejectUnauthorized: false }, connectTimeout: PROBE_TIMEOUT_MS });
-  }
-  if (!pfsense.caPem) {
-    return new Agent({ connectTimeout: PROBE_TIMEOUT_MS });
-  }
-  const servername = new X509Certificate(pfsense.caPem).subject
-    .split("\n")
-    .find((line) => line.startsWith("CN="))
-    ?.slice(3);
-  return new Agent({ connect: { ca: pfsense.caPem, servername }, connectTimeout: PROBE_TIMEOUT_MS });
-}
-
 export async function ping(pfsense: PfsenseConfig): Promise<ServiceResult> {
-  let dispatcher: Agent;
+  let dispatcher: Agent | null;
   try {
-    dispatcher = dispatcherFor(pfsense);
+    // Certificat pfSense auto-signé : le CN du PEM est aussi le nom présenté par la feuille.
+    dispatcher = tlsAgent(pfsense, PROBE_TIMEOUT_MS, true);
   } catch (e) {
     return { success: false, error: `certificat CA invalide : ${(e as Error).message}` };
   }
@@ -30,13 +18,13 @@ export async function ping(pfsense: PfsenseConfig): Promise<ServiceResult> {
   try {
     const res = await undiciFetch(`${pfsense.url}/api/v2/status/system`, {
       headers: { "X-API-Key": pfsense.apiKey },
-      dispatcher,
+      dispatcher: dispatcher ?? undefined,
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     });
     return res.ok ? { success: true } : { success: false, error: `HTTP ${res.status}` };
   } catch (e) {
     return { success: false, error: describeFetchError(e) };
   } finally {
-    await dispatcher.close();
+    await dispatcher?.close();
   }
 }

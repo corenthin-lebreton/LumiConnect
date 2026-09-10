@@ -62,6 +62,8 @@ export function InfraGroupForm(props: Props) {
       proxmox_node: group?.proxmox_node ?? "",
       proxmox_token_id: group?.proxmox_token_id ?? "",
       proxmox_token_secret: "",
+      proxmox_ca_pem: group?.proxmox_ca_pem ?? "",
+      proxmox_insecure_tls: group?.proxmox_insecure_tls ?? false,
       pfsense_url: group?.pfsense_url ?? "",
       pfsense_api_key: "",
       pfsense_ca_pem: group?.pfsense_ca_pem ?? "",
@@ -168,6 +170,36 @@ export function InfraGroupForm(props: Props) {
             <Input id="proxmox_token_secret" type="password" autoComplete="new-password" {...form.register("proxmox_token_secret")} className="mt-1.5" placeholder={secretPlaceholder} />
             <FieldError message={errors.proxmox_token_secret?.message} />
           </div>
+          <div className="md:col-span-2">
+            <FieldLabel htmlFor="proxmox_ca_pem">Certificat CA (optionnel)</FieldLabel>
+            <textarea
+              id="proxmox_ca_pem"
+              {...form.register("proxmox_ca_pem")}
+              rows={5}
+              spellCheck={false}
+              placeholder="-----BEGIN CERTIFICATE-----"
+              className="mt-1.5 w-full rounded-md border border-line-strong bg-card px-3 py-2 font-mono text-xs outline-none transition-[border-color,box-shadow] duration-150 placeholder:font-sans placeholder:text-muted-foreground/80 hover:border-foreground/30 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+            />
+            <FieldHint>
+              CA interne de Proxmox : /etc/pve/pve-root-ca.pem sur le nœud. Vide : confiance
+              système.
+            </FieldHint>
+            <FieldError message={errors.proxmox_ca_pem?.message} />
+          </div>
+          <label className="flex cursor-pointer items-start gap-3 md:col-span-2">
+            <input
+              type="checkbox"
+              {...form.register("proxmox_insecure_tls")}
+              className="mt-0.5 h-4 w-4 accent-primary"
+            />
+            <span className="text-sm">
+              Accepter un certificat auto-signé sans CA
+              <span className="block text-xs leading-relaxed text-muted-foreground">
+                Désactive la vérification TLS vers Proxmox : le lien devient interceptable, et le
+                jeton d&apos;API y circule. Préférer la CA ci-dessus quand elle est disponible.
+              </span>
+            </span>
+          </label>
         </div>
       </Section>
 
