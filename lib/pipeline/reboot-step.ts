@@ -6,7 +6,9 @@ import type { Shell } from "@/lib/scripts/escape";
 import type { ProxmoxConfig, ServiceResult } from "@/types";
 
 const REBOOT_STEP = "reboot";
-const SHUTDOWN_TIMEOUT_MS = 300_000;
+// Windows finalise à l'arrêt les fonctionnalités et mises à jour en attente (WSL2, .NET…),
+// ce qui dépasse couramment 5 min ; Linux s'éteint en quelques secondes.
+const SHUTDOWN_TIMEOUT_MS: Record<Shell, number> = { powershell: 900_000, bash: 300_000 };
 
 export const REBOOT_STEPS: StepDefinition[] = [{ step: REBOOT_STEP, label: "Redémarrage" }];
 
@@ -23,14 +25,14 @@ export async function settleAfterBoot(shell: Shell): Promise<void> {
 // Arrêt puis démarrage plutôt que POST status/reboot : la tâche de redémarrage Proxmox rend la
 // main avant que le guest agent ait cessé de répondre, si bien qu'un agent/ping immédiat peut
 // être servi par l'agent d'avant le redémarrage — waitForAgent croirait la VM déjà revenue.
-// shutdownVm, lui, attend réellement l'état « stopped ».
+// shutdownVm, lui, attend réellement l'état « stopped » (ou force l'arrêt passé le délai).
 export async function restartGuest(
   proxmox: ProxmoxConfig,
   vmid: number,
   shell: Shell,
   agentTimeoutMs: number
 ): Promise<ServiceResult> {
-  const stopped = await shutdownVm(proxmox, vmid, SHUTDOWN_TIMEOUT_MS);
+  const stopped = await shutdownVm(proxmox, vmid, SHUTDOWN_TIMEOUT_MS[shell]);
   if (!stopped.success) return { success: false, error: `arrêt : ${stopped.error}` };
 
   const started = await startVm(proxmox, vmid);

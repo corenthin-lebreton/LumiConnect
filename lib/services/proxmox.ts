@@ -137,8 +137,12 @@ async function currentStatus(proxmox: ProxmoxConfig, vmid: number): Promise<stri
   return String(res.data?.status ?? "");
 }
 
-// Arrêt ACPI propre (le guest agent est présent), puis attente réelle de l'état « stopped » :
-// la tâche shutdown se termine avant que la VM ait fini de s'éteindre.
+// Arrêt propre via le guest agent, borné par `timeout` côté Proxmox : sans lui, la tâche
+// qmshutdown attend l'extinction indéfiniment (Windows qui finalise des fonctionnalités à
+// l'arrêt peut dépasser plusieurs minutes), et notre propre attente expirait en laissant la VM
+// à moitié éteinte. Passé le délai, on force l'arrêt pour rendre un état connu.
+const TASK_GRACE_MS = 30_000;
+
 export async function shutdownVm(
   proxmox: ProxmoxConfig,
   vmid: number,
@@ -147,21 +151,26 @@ export async function shutdownVm(
   try {
     if ((await currentStatus(proxmox, vmid)) === "stopped") return { success: true };
 
-    const res = await pveFetch(proxmox, `/nodes/${proxmox.node}/qemu/${vmid}/status/shutdown`, {
-      method: "POST",
-    });
-    await waitForTask(proxmox, res.data, timeoutMs);
+    const timeoutSec = Math.ceil(timeoutMs / 1000);
+    const res = await pveFetch(
+      proxmox,
+      `/nodes/${proxmox.node}/qemu/${vmid}/status/shutdown`,
+      form({ timeout: String(timeoutSec) })
+    );
 
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-      if ((await currentStatus(proxmox, vmid)) === "stopped") return { success: true };
-      await sleep(POLL_INTERVAL_MS);
+    try {
+      await waitForTask(proxmox, res.data, timeoutMs + TASK_GRACE_MS);
+    } catch (e) {
+      // « Task timeout » (notre attente) ou « got timeout » (celle de Proxmox) : on force.
+      if (!/timeout/i.test((e as Error).message)) throw e;
     }
+
+    if ((await currentStatus(proxmox, vmid)) === "stopped") return { success: true };
 
     await stopVm(proxmox, vmid);
     return {
       success: false,
-      error: `la VM ${vmid} ne s'est pas éteinte proprement en ${Math.round(timeoutMs / 1000)} s, arrêt forcé`,
+      error: `la VM ${vmid} ne s'est pas éteinte proprement en ${timeoutSec} s, arrêt forcé`,
     };
   } catch (e) {
     return { success: false, error: (e as Error).message };
