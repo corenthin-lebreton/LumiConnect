@@ -6,7 +6,7 @@ import {
   waitForAgent,
 } from "@/lib/services/proxmox-agent";
 import { restartGuest, settleAfterBoot } from "@/lib/pipeline/reboot-step";
-import { PENDING_REBOOT_COMMAND, parsePendingReboot } from "@/lib/pipeline/pending-reboot";
+import { runWithRebootRetry } from "@/lib/pipeline/pending-reboot";
 import { renderContextFile, type Shell } from "@/lib/scripts/escape";
 import { loadScriptContent, type ScriptEntry, type ScriptRegistry } from "@/lib/scripts/registry";
 import { markStep } from "@/lib/progress";
@@ -163,41 +163,10 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
   }
   await markStep(formationId, vmid, CONTEXT_STEP, "success");
 
-  // Renvoie un message d'erreur, ou null quand la machine est prête à installer.
-  const clearPendingReboot = async (scriptId: string): Promise<string | null> => {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      const probe = await runGuestCommand(proxmox, vmid, PENDING_REBOOT_COMMAND, COMMAND_TIMEOUT_MS);
-      if (!probe.success) return `détection du redémarrage en attente : ${probe.error}`;
-
-      let pending: boolean;
-      try {
-        pending = parsePendingReboot(probe.data!.stdout);
-      } catch (e) {
-        return (e as Error).message;
-      }
-      if (!pending) return null;
-
-      if (attempt > 0) {
-        return `un redémarrage Windows reste en attente après redémarrage, ${scriptId} ne peut pas s'installer`;
-      }
-
-      console.log(`[configure] vmid=${vmid} redémarrage en attente avant ${scriptId}`);
-      const restarted = await restartGuest(proxmox, vmid, shell, agentTimeoutMs);
-      if (!restarted.success) return `redémarrage avant ${scriptId} : ${restarted.error}`;
-    }
-
-    return null;
-  };
-
   const runScripts = async (): Promise<ConfigureVmResult> => {
     for (const entry of entries) {
       const step = scriptStep(entry.id);
       await markStep(formationId, vmid, step, "running");
-
-      if (entry.reboot_if_pending && shell === "powershell") {
-        const blocked = await clearPendingReboot(entry.id);
-        if (blocked) return fail(step, blocked);
-      }
 
       let content: string;
       try {
@@ -206,13 +175,20 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
         return fail(step, (e as Error).message);
       }
 
-      const run = await runGuestScript(proxmox, {
-        vmid,
-        shell,
-        remotePath: `${paths.dir}${paths.separator}${entry.id}.${paths.extension}`,
-        content,
-        timeoutMs: entry.timeout_sec * 1000,
-      });
+      const runOnce = () =>
+        runGuestScript(proxmox, {
+          vmid,
+          shell,
+          remotePath: `${paths.dir}${paths.separator}${entry.id}.${paths.extension}`,
+          content,
+          timeoutMs: entry.timeout_sec * 1000,
+        });
+
+      const run = entry.reboot_if_pending
+        ? await runWithRebootRetry(entry.id, runOnce, () =>
+            restartGuest(proxmox, vmid, shell, agentTimeoutMs)
+          )
+        : await runOnce();
 
       if (!run.success) {
         await markStep(formationId, vmid, step, "failed", {

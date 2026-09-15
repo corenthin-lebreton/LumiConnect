@@ -48,6 +48,30 @@ if ($env:LC_PASSWORD -notmatch '^[\x20-\x7E]+$') {
     throw 'LC_PASSWORD contient des caractères hors ASCII imprimable, incompatibles avec le fichier de configuration'
 }
 
+# Le paquet Chocolatey refuse d'installer tant qu'un redémarrage est en attente (règle
+# RebootRequiredCheck de SQL Server) et le signale par un code -1 opaque. Windows Update,
+# Defender ou Chocolatey posent ces marqueurs à tout moment, y compris juste après le boot :
+# la vérification se fait donc ici, au plus près de l'installation, avec les mêmes clés que le
+# paquet. Le code 3010 demande à l'application de redémarrer la VM et de relancer ce script.
+function Test-PendingReboot {
+    if (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending') { return $true }
+    if (Test-Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired') { return $true }
+    $sm = Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -Name PendingFileRenameOperations -ErrorAction SilentlyContinue
+    if ($sm -and $sm.PendingFileRenameOperations) { return $true }
+    foreach ($value in 'JoinDomain', 'AvoidSpnSet') {
+        if (Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Services\Netlogon' -Name $value -ErrorAction SilentlyContinue) { return $true }
+    }
+    $active = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\ComputerName\ActiveComputerName' -Name ComputerName -ErrorAction SilentlyContinue).ComputerName
+    $target = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName' -Name ComputerName -ErrorAction SilentlyContinue).ComputerName
+    if ($active -and $target -and $active -ne $target) { return $true }
+    return $false
+}
+
+if (Test-PendingReboot) {
+    Write-Step 'redémarrage Windows en attente, installation reportée après redémarrage'
+    exit 3010
+}
+
 $sysadmins = '"{0}\{1}" "NT AUTHORITY\SYSTEM"' -f $env:COMPUTERNAME, $env:LC_USERNAME
 Write-Step "sysadmin : $env:COMPUTERNAME\$env:LC_USERNAME"
 

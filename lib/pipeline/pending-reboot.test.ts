@@ -1,28 +1,79 @@
 import { describe, expect, it } from "vitest";
-import { PENDING_REBOOT_COMMAND, parsePendingReboot } from "./pending-reboot";
+import { REBOOT_PENDING_EXIT_CODE, runWithRebootRetry } from "./pending-reboot";
+import type { RunScriptOutcome } from "@/lib/services/proxmox-agent";
+import type { ServiceResult } from "@/types";
 
-describe("parsePendingReboot", () => {
-  it("lit un redémarrage en attente", () => {
-    expect(parsePendingReboot("LC_REBOOT_PENDING=1\r\n")).toBe(true);
+function outcome(exitcode: number): ServiceResult<RunScriptOutcome> {
+  const data = { exitcode, stdout: "", stderr: "", truncated: false };
+  return exitcode === 0
+    ? { success: true, data }
+    : { success: false, data, error: `code ${exitcode}` };
+}
+
+function sequence(...codes: number[]) {
+  const calls: number[] = [];
+  const run = async () => {
+    const code = codes[calls.length] ?? 0;
+    calls.push(code);
+    return outcome(code);
+  };
+  return { run, calls };
+}
+
+describe("runWithRebootRetry", () => {
+  it("rend le résultat tel quel quand le script réussit", async () => {
+    const { run, calls } = sequence(0);
+    let restarts = 0;
+    const result = await runWithRebootRetry("sqlserver", run, async () => {
+      restarts++;
+      return { success: true };
+    });
+    expect(result.success).toBe(true);
+    expect(calls).toEqual([0]);
+    expect(restarts).toBe(0);
   });
 
-  it("lit une machine propre", () => {
-    expect(parsePendingReboot("LC_REBOOT_PENDING=0\r\n")).toBe(false);
+  it("rend l'échec tel quel quand le code n'est pas celui du redémarrage", async () => {
+    const { run } = sequence(1);
+    let restarts = 0;
+    const result = await runWithRebootRetry("sqlserver", run, async () => {
+      restarts++;
+      return { success: true };
+    });
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("code 1");
+    expect(restarts).toBe(0);
   });
 
-  it("rejette une sortie sans marqueur plutôt que de supposer la machine propre", () => {
-    expect(() => parsePendingReboot("Access is denied.")).toThrow(/illisible/);
+  it("redémarre puis relance le script quand il signale un redémarrage en attente", async () => {
+    const { run, calls } = sequence(REBOOT_PENDING_EXIT_CODE, 0);
+    let restarts = 0;
+    const result = await runWithRebootRetry("sqlserver", run, async () => {
+      restarts++;
+      return { success: true };
+    });
+    expect(result.success).toBe(true);
+    expect(restarts).toBe(1);
+    expect(calls).toEqual([REBOOT_PENDING_EXIT_CODE, 0]);
   });
-});
 
-describe("PENDING_REBOOT_COMMAND", () => {
-  it("s'exécute sans profil ni interaction et sort toujours en 0", () => {
-    expect(PENDING_REBOOT_COMMAND.slice(0, 4)).toEqual([
-      "powershell.exe",
-      "-NoProfile",
-      "-NonInteractive",
-      "-Command",
-    ]);
-    expect(PENDING_REBOOT_COMMAND[4]).toContain("exit 0");
+  it("abandonne quand le redémarrage reste en attente après redémarrage", async () => {
+    const { run, calls } = sequence(REBOOT_PENDING_EXIT_CODE, REBOOT_PENDING_EXIT_CODE);
+    const result = await runWithRebootRetry("sqlserver", run, async () => ({ success: true }));
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/reste en attente après redémarrage/);
+    expect(result.error).toContain("sqlserver");
+    expect(calls).toHaveLength(2);
+  });
+
+  it("remonte l'échec du redémarrage sans relancer le script", async () => {
+    const { run, calls } = sequence(REBOOT_PENDING_EXIT_CODE, 0);
+    const result = await runWithRebootRetry("sqlserver", run, async () => ({
+      success: false,
+      error: "arrêt : délai dépassé",
+    }));
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("redémarrage avant sqlserver : arrêt : délai dépassé");
+    expect(calls).toHaveLength(1);
   });
 });

@@ -1,42 +1,39 @@
-// Détection d'un redémarrage Windows en attente.
+// Redémarrage Windows en attente avant un script.
 //
 // Le programme d'installation de SQL Server refuse de démarrer tant qu'un redémarrage est
-// en attente (règle RebootRequiredCheck), et l'erreur remonte sous la forme opaque d'un
-// « choco install a terminé avec le code -1 ». Chocolatey lui-même, .NET Framework ou une
-// mise à jour Windows laissent régulièrement l'un de ces marqueurs.
-//
-// La sonde sort toujours en 0 : waitForExec traite le moindre code non nul comme un échec
-// d'étape, le résultat passe donc par stdout.
+// en attente (règle RebootRequiredCheck). Chocolatey lui-même, .NET Framework, Windows Update
+// ou Defender laissent régulièrement l'un de ces marqueurs — y compris dans la minute qui suit
+// le boot, donc APRÈS une sonde lancée depuis l'application. Le script vérifie donc lui-même
+// les marqueurs juste avant d'installer et, s'il en trouve, sort avec le code 3010
+// (ERROR_SUCCESS_REBOOT_REQUIRED) : l'application redémarre la VM et relance le script, qui
+// est idempotent. Un second 3010 après redémarrage est une erreur définitive.
 
-const MARKER = "LC_REBOOT_PENDING";
+import type { RunScriptOutcome } from "@/lib/services/proxmox-agent";
+import type { ServiceResult } from "@/types";
 
-const PROBE = [
-  "$pending = $false",
-  "if (Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootPending') { $pending = $true }",
-  "if (Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired') { $pending = $true }",
-  "$sm = Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Session Manager' -Name PendingFileRenameOperations -ErrorAction SilentlyContinue",
-  "if ($sm -and $sm.PendingFileRenameOperations) { $pending = $true }",
-  "$active = (Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\ComputerName\\ActiveComputerName' -Name ComputerName -ErrorAction SilentlyContinue).ComputerName",
-  "$target = (Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\ComputerName\\ComputerName' -Name ComputerName -ErrorAction SilentlyContinue).ComputerName",
-  "if ($active -and $target -and $active -ne $target) { $pending = $true }",
-  `Write-Output ('${MARKER}=' + $(if ($pending) { '1' } else { '0' }))`,
-  "exit 0",
-].join("; ");
+export const REBOOT_PENDING_EXIT_CODE = 3010;
 
-export const PENDING_REBOOT_COMMAND: string[] = [
-  "powershell.exe",
-  "-NoProfile",
-  "-NonInteractive",
-  "-Command",
-  PROBE,
-];
+export async function runWithRebootRetry(
+  scriptId: string,
+  run: () => Promise<ServiceResult<RunScriptOutcome>>,
+  restart: () => Promise<ServiceResult>
+): Promise<ServiceResult<RunScriptOutcome>> {
+  const first = await run();
+  if (first.success || first.data?.exitcode !== REBOOT_PENDING_EXIT_CODE) return first;
 
-export function parsePendingReboot(stdout: string): boolean {
-  const match = stdout.match(new RegExp(`${MARKER}=([01])`));
-  if (!match) {
-    throw new Error(
-      `sortie illisible de la sonde de redémarrage en attente : ${JSON.stringify(stdout.slice(0, 200))}`
-    );
+  console.log(`[configure] redémarrage en attente avant ${scriptId}`);
+  const restarted = await restart();
+  if (!restarted.success) {
+    return { success: false, error: `redémarrage avant ${scriptId} : ${restarted.error}` };
   }
-  return match[1] === "1";
+
+  const second = await run();
+  if (!second.success && second.data?.exitcode === REBOOT_PENDING_EXIT_CODE) {
+    return {
+      success: false,
+      data: second.data,
+      error: `un redémarrage Windows reste en attente après redémarrage, ${scriptId} ne peut pas s'installer`,
+    };
+  }
+  return second;
 }
