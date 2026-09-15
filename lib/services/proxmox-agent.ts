@@ -9,6 +9,10 @@ import {
 
 const FILE_WRITE_MAX_CHARS = 61440;
 const TASK_TIMEOUT_MS = 120_000;
+// Sous forte charge (installation SQL Server, Docker Desktop), l'agent Windows met parfois
+// plus que le délai qga de Proxmox à répondre à guest-exec-status : « got timeout » alors que
+// le script tourne toujours. Un échec ne compte donc qu'au bout de cette durée sans réponse.
+const EXEC_STATUS_GRACE_MS = 300_000;
 
 async function waitForTask(proxmox: ProxmoxConfig, upid: string, timeoutMs: number): Promise<void> {
   const start = Date.now();
@@ -259,10 +263,19 @@ async function waitForExec(
   label: string
 ): Promise<ServiceResult<RunScriptOutcome>> {
   const start = Date.now();
+  let firstFailureAt: number | null = null;
 
   while (Date.now() - start < timeoutMs) {
     const status = await guestExecStatus(proxmox, vmid, pid);
-    if (!status.success) return { success: false, error: `exec-status pid=${pid} : ${status.error}` };
+    if (!status.success) {
+      firstFailureAt ??= Date.now();
+      if (Date.now() - firstFailureAt >= EXEC_STATUS_GRACE_MS) {
+        return { success: false, error: `exec-status pid=${pid} : ${status.error}` };
+      }
+      await sleep(AGENT_POLL_INTERVAL_MS);
+      continue;
+    }
+    firstFailureAt = null;
 
     const result = status.data!;
     if (result.exited) {
