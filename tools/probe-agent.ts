@@ -33,16 +33,16 @@ function step(label: string) {
   process.stdout.write(`  ${label.padEnd(34, ".")} `);
 }
 
-async function main() {
-  const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
-  if (missing.length > 0) {
-    fail(`variables d'environnement manquantes : ${missing.join(", ")}`);
-  }
+interface ProbeArgs {
+  vmid: number;
+  shell: Shell;
+  groupName: string | undefined;
+}
 
-  const args = process.argv.slice(2);
-  const groupIndex = args.indexOf("--group");
-  const groupName = groupIndex >= 0 ? args[groupIndex + 1] : undefined;
-  const positional = args.filter((_, i) => i !== groupIndex && i !== groupIndex + 1);
+function parseArgs(argv: string[]): ProbeArgs {
+  const groupIndex = argv.indexOf("--group");
+  const groupName = groupIndex >= 0 ? argv[groupIndex + 1] : undefined;
+  const positional = argv.filter((_, i) => i !== groupIndex && i !== groupIndex + 1);
 
   const vmid = Number(positional[0]);
   if (!Number.isInteger(vmid) || vmid <= 0) {
@@ -54,13 +54,41 @@ async function main() {
     fail(`shell inconnu : ${shell} (attendu « bash » ou « powershell »)`);
   }
 
+  return { vmid, shell, groupName };
+}
+
+interface GuestLayout {
+  isWindows: boolean;
+  dir: string;
+  sep: string;
+  ext: string;
+  contextPath: string;
+  tmpDir: string;
+}
+
+function guestLayout(shell: Shell): GuestLayout {
   const isWindows = shell === "powershell";
   const dir = isWindows ? "C:\\ProgramData\\lumiconnect" : "/opt/lumiconnect";
   const sep = isWindows ? "\\" : "/";
-  const ext = isWindows ? "ps1" : "sh";
+  return {
+    isWindows,
+    dir,
+    sep,
+    ext: isWindows ? "ps1" : "sh",
+    contextPath: `${dir}${sep}context.${isWindows ? "ps1" : "env"}`,
+    tmpDir: isWindows ? "C:\\Windows\\Temp" : "/tmp",
+  };
+}
 
-  const proxmox = await selectProxmox(groupName);
-  console.log(`\n  Sonde guest agent — VM ${vmid}, shell ${shell}, nœud ${proxmox.node}\n`);
+interface Probe {
+  proxmox: ProxmoxConfig;
+  vmid: number;
+  shell: Shell;
+  layout: GuestLayout;
+}
+
+async function probeBoot(probe: Probe) {
+  const { proxmox, vmid } = probe;
 
   step("démarrage de la VM");
   const started = await startVm(proxmox, vmid);
@@ -72,21 +100,22 @@ async function main() {
   const agent = await waitForAgent(proxmox, vmid, agentTimeoutMs);
   if (!agent.success) fail(agent.error!);
   console.log("ok");
+}
 
-  const canary = `LumiConnect'; echo PWNED; #`;
+async function probeContext(probe: Probe, canary: string) {
+  const { proxmox, vmid, shell, layout } = probe;
+  const { isWindows, dir, sep, ext } = layout;
 
   step("écriture du fichier de contexte");
-  const contextPath = `${dir}${sep}context.${isWindows ? "ps1" : "env"}`;
   const contextBody = renderContextFile(shell, { LC_PROBE: canary });
   const mkdir = isWindows
     ? `New-Item -ItemType Directory -Force -Path '${dir}' | Out-Null\r\n`
     : `mkdir -p '${dir}'\n`;
 
-  const bootstrapPath = `${dir === "/opt/lumiconnect" ? "/tmp" : "C:\\Windows\\Temp"}${sep}lc-probe-bootstrap.${ext}`;
   const bootstrap = await runGuestScript(proxmox, {
     vmid,
     shell,
-    remotePath: bootstrapPath,
+    remotePath: `${layout.tmpDir}${sep}lc-probe-bootstrap.${ext}`,
     content: mkdir,
     timeoutMs: 60000,
   });
@@ -95,12 +124,17 @@ async function main() {
   const writeContext = await runGuestScript(proxmox, {
     vmid,
     shell,
-    remotePath: contextPath,
+    remotePath: layout.contextPath,
     content: contextBody,
     timeoutMs: 60000,
   });
   if (!writeContext.success) fail(`écriture du contexte : ${writeContext.error}`);
   console.log("ok");
+}
+
+async function probeScript(probe: Probe, canary: string) {
+  const { proxmox, vmid, shell, layout } = probe;
+  const { isWindows, dir, sep, ext, contextPath } = layout;
 
   step("exécution d'un script + code retour");
   const body = isWindows
@@ -121,10 +155,17 @@ async function main() {
   const stdout = run.data!.stdout.trim();
   if (stdout !== canary) {
     fail(
-      `la valeur est ressortie altérée.\n     attendu : ${JSON.stringify(canary)}\n     reçu    : ${JSON.stringify(stdout)}`
+      `la valeur est ressortie altérée.\n` +
+        `     attendu : ${JSON.stringify(canary)}\n` +
+        `     reçu    : ${JSON.stringify(stdout)}`
     );
   }
   console.log("ok");
+}
+
+async function probeExitCode(probe: Probe) {
+  const { proxmox, vmid, shell, layout } = probe;
+  const { isWindows, dir, sep, ext } = layout;
 
   step("détection d'un code de sortie non nul");
   const failing = await runGuestScript(proxmox, {
@@ -139,6 +180,25 @@ async function main() {
     fail(`code de sortie attendu 3, obtenu ${failing.data?.exitcode}`);
   }
   console.log("ok");
+}
+
+async function main() {
+  const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
+  if (missing.length > 0) {
+    fail(`variables d'environnement manquantes : ${missing.join(", ")}`);
+  }
+
+  const { vmid, shell, groupName } = parseArgs(process.argv.slice(2));
+  const proxmox = await selectProxmox(groupName);
+  console.log(`\n  Sonde guest agent — VM ${vmid}, shell ${shell}, nœud ${proxmox.node}\n`);
+
+  const probe: Probe = { proxmox, vmid, shell, layout: guestLayout(shell) };
+  const canary = `LumiConnect'; echo PWNED; #`;
+
+  await probeBoot(probe);
+  await probeContext(probe, canary);
+  await probeScript(probe, canary);
+  await probeExitCode(probe);
 
   console.log("\n  Socle guest agent validé.\n");
 }

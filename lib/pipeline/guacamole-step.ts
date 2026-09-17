@@ -77,25 +77,21 @@ export type GuacamoleVmResult =
   | { ok: true; credentials: GuacamoleCredentials }
   | { ok: false; step: string; error: string; credentials: Partial<GuacamoleCredentials> };
 
-export async function provisionGuacamoleVm(
+type FailFn = (
+  step: string,
+  error: string,
+  credentials?: Partial<GuacamoleCredentials>
+) => Promise<GuacamoleVmResult>;
+
+async function createConnection(
   guac: GuacamoleConfig,
   formation: Formation,
   groups: GuacamoleGroups,
   vm: GuacamoleVm,
-  vmPassword: string
-): Promise<GuacamoleVmResult> {
-  const { id: formationId } = formation;
-
-  const fail = async (
-    step: string,
-    error: string,
-    credentials: Partial<GuacamoleCredentials> = {}
-  ): Promise<GuacamoleVmResult> => {
-    await markStep(formationId, vm.vmid, step, "failed", { message: error });
-    return { ok: false, step, error, credentials };
-  };
-
-  await markStep(formationId, vm.vmid, CONN_STEP, "running");
+  vmPassword: string,
+  fail: FailFn
+): Promise<{ connectionId: string } | GuacamoleVmResult> {
+  await markStep(formation.id, vm.vmid, CONN_STEP, "running");
   const connection = await guacamole.createRdpConnection(
     guac,
     `${formation.name}-${vm.vmid}`,
@@ -106,10 +102,19 @@ export async function provisionGuacamoleVm(
     groups.connectionGroupId
   );
   if (!connection.success) return fail(CONN_STEP, connection.error!);
-  const connectionId = connection.data!.identifier;
-  await markStep(formationId, vm.vmid, CONN_STEP, "success");
+  await markStep(formation.id, vm.vmid, CONN_STEP, "success");
+  return { connectionId: connection.data!.identifier };
+}
 
-  await markStep(formationId, vm.vmid, USER_STEP, "running");
+async function createUserAccess(
+  guac: GuacamoleConfig,
+  formation: Formation,
+  groups: GuacamoleGroups,
+  vm: GuacamoleVm,
+  connectionId: string,
+  fail: FailFn
+): Promise<GuacamoleVmResult> {
+  await markStep(formation.id, vm.vmid, USER_STEP, "running");
   const username = `${slugify(formation.name)}-${vm.iteration}`;
   const password = generatePassword();
   const credentials: GuacamoleCredentials = {
@@ -136,6 +141,24 @@ export async function provisionGuacamoleVm(
     return fail(USER_STEP, `assignConnectionPermission : ${permitted.error}`, credentials);
   }
 
-  await markStep(formationId, vm.vmid, USER_STEP, "success");
+  await markStep(formation.id, vm.vmid, USER_STEP, "success");
   return { ok: true, credentials };
+}
+
+export async function provisionGuacamoleVm(
+  guac: GuacamoleConfig,
+  formation: Formation,
+  groups: GuacamoleGroups,
+  vm: GuacamoleVm,
+  vmPassword: string
+): Promise<GuacamoleVmResult> {
+  const fail: FailFn = async (step, error, credentials = {}) => {
+    await markStep(formation.id, vm.vmid, step, "failed", { message: error });
+    return { ok: false, step, error, credentials };
+  };
+
+  const connection = await createConnection(guac, formation, groups, vm, vmPassword, fail);
+  if ("ok" in connection) return connection;
+
+  return createUserAccess(guac, formation, groups, vm, connection.connectionId, fail);
 }

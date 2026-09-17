@@ -60,7 +60,8 @@ function prepareDirectoryCommand(shell: Shell, paths: GuestPaths): string[] {
       "-NonInteractive",
       "-Command",
       `New-Item -ItemType Directory -Force -Path '${paths.dir}' | Out-Null; ` +
-        `icacls '${paths.dir}' /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' /grant:r '*S-1-5-32-544:(OI)(CI)F' | Out-Null`,
+        `icacls '${paths.dir}' /inheritance:r ` +
+        `/grant:r '*S-1-5-18:(OI)(CI)F' /grant:r '*S-1-5-32-544:(OI)(CI)F' | Out-Null`,
     ];
   }
   return ["/bin/bash", "-c", `mkdir -p '${paths.dir}' && chmod 700 '${paths.dir}'`];
@@ -105,26 +106,38 @@ export interface ConfigureVmResult {
 
 const COMMAND_TIMEOUT_MS = 60_000;
 
-export async function configureVm(options: ConfigureVmOptions): Promise<ConfigureVmResult> {
-  const { proxmox, formationId, vmid, registry, entries, agentTimeoutMs } = options;
-  const shell = registry.shell;
-  const paths = guestPaths(shell);
+interface VmContext {
+  proxmox: ProxmoxConfig;
+  formationId: string;
+  vmid: number;
+  shell: Shell;
+  paths: GuestPaths;
+  agentTimeoutMs: number;
+  fail: (step: string, error: string) => Promise<ConfigureVmResult>;
+}
 
-  const fail = async (step: string, error: string): Promise<ConfigureVmResult> => {
-    await markStep(formationId, vmid, step, "failed", { message: error });
-    return { ok: false, failedStep: step, error };
-  };
+async function bootVm(ctx: VmContext): Promise<ConfigureVmResult | null> {
+  const { proxmox, formationId, vmid } = ctx;
 
   await markStep(formationId, vmid, START_STEP, "running");
   const started = await startVm(proxmox, vmid);
-  if (!started.success) return fail(START_STEP, started.error!);
+  if (!started.success) return ctx.fail(START_STEP, started.error!);
   await markStep(formationId, vmid, START_STEP, "success");
 
   await markStep(formationId, vmid, AGENT_STEP, "running");
-  const agent = await waitForAgent(proxmox, vmid, agentTimeoutMs);
-  if (!agent.success) return fail(AGENT_STEP, agent.error!);
+  const agent = await waitForAgent(proxmox, vmid, ctx.agentTimeoutMs);
+  if (!agent.success) return ctx.fail(AGENT_STEP, agent.error!);
   await markStep(formationId, vmid, AGENT_STEP, "success");
-  await settleAfterBoot(shell);
+  await settleAfterBoot(ctx.shell);
+
+  return null;
+}
+
+async function writeContext(
+  ctx: VmContext,
+  options: ConfigureVmOptions
+): Promise<ConfigureVmResult | null> {
+  const { proxmox, formationId, vmid, shell, paths } = ctx;
 
   await markStep(formationId, vmid, CONTEXT_STEP, "running");
 
@@ -134,7 +147,9 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
     prepareDirectoryCommand(shell, paths),
     COMMAND_TIMEOUT_MS
   );
-  if (!prepared.success) return fail(CONTEXT_STEP, `création de ${paths.dir} : ${prepared.error}`);
+  if (!prepared.success) {
+    return ctx.fail(CONTEXT_STEP, `création de ${paths.dir} : ${prepared.error}`);
+  }
 
   let contextBody: string;
   try {
@@ -146,80 +161,125 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
       LC_VMID: String(vmid),
     });
   } catch (e) {
-    return fail(CONTEXT_STEP, (e as Error).message);
+    return ctx.fail(CONTEXT_STEP, (e as Error).message);
   }
 
   const contextWritten = await guestFileWrite(proxmox, vmid, paths.contextPath, contextBody);
   if (!contextWritten.success) {
-    return fail(CONTEXT_STEP, `écriture du contexte : ${contextWritten.error}`);
+    return ctx.fail(CONTEXT_STEP, `écriture du contexte : ${contextWritten.error}`);
   }
 
   const restrict = restrictContextCommand(shell, paths);
   if (restrict) {
     const restricted = await runGuestCommand(proxmox, vmid, restrict, COMMAND_TIMEOUT_MS);
     if (!restricted.success) {
-      return fail(CONTEXT_STEP, `droits sur le contexte : ${restricted.error}`);
+      return ctx.fail(CONTEXT_STEP, `droits sur le contexte : ${restricted.error}`);
     }
   }
   await markStep(formationId, vmid, CONTEXT_STEP, "success");
 
-  const runScripts = async (): Promise<ConfigureVmResult> => {
-    for (const entry of entries) {
-      const step = scriptStep(entry.id);
-      await markStep(formationId, vmid, step, "running");
+  return null;
+}
 
-      let content: string;
-      try {
-        content = await loadScriptContent(registry, entry);
-      } catch (e) {
-        return fail(step, (e as Error).message);
-      }
+async function runScript(
+  ctx: VmContext,
+  registry: ScriptRegistry,
+  entry: ScriptEntry
+): Promise<ConfigureVmResult | null> {
+  const { proxmox, formationId, vmid, shell, paths, agentTimeoutMs } = ctx;
+  const step = scriptStep(entry.id);
+  await markStep(formationId, vmid, step, "running");
 
-      const runOnce = () =>
-        runGuestScript(proxmox, {
-          vmid,
-          shell,
-          remotePath: `${paths.dir}${paths.separator}${entry.id}.${paths.extension}`,
-          content,
-          timeoutMs: entry.timeout_sec * 1000,
-        });
+  let content: string;
+  try {
+    content = await loadScriptContent(registry, entry);
+  } catch (e) {
+    return ctx.fail(step, (e as Error).message);
+  }
 
-      const run = entry.reboot_if_pending
-        ? await runWithRebootRetry(entry.id, runOnce, () =>
-            restartGuest(proxmox, vmid, shell, agentTimeoutMs)
-          )
-        : await runOnce();
+  const runOnce = () =>
+    runGuestScript(proxmox, {
+      vmid,
+      shell,
+      remotePath: `${paths.dir}${paths.separator}${entry.id}.${paths.extension}`,
+      content,
+      timeoutMs: entry.timeout_sec * 1000,
+    });
 
-      if (!run.success) {
-        await markStep(formationId, vmid, step, "failed", {
-          message: run.error,
-          exitCode: run.data?.exitcode ?? null,
-          stdout: run.data?.stdout ?? null,
-          stderr: run.data?.stderr ?? null,
-        });
-        return { ok: false, failedStep: step, error: run.error };
-      }
+  const run = entry.reboot_if_pending
+    ? await runWithRebootRetry(entry.id, runOnce, () =>
+        restartGuest(proxmox, vmid, shell, agentTimeoutMs)
+      )
+    : await runOnce();
 
-      await markStep(formationId, vmid, step, "success", {
-        exitCode: run.data!.exitcode,
-        stdout: run.data!.stdout,
-        stderr: run.data!.stderr,
-      });
+  if (!run.success) {
+    await markStep(formationId, vmid, step, "failed", {
+      message: run.error,
+      exitCode: run.data?.exitcode ?? null,
+      stdout: run.data?.stdout ?? null,
+      stderr: run.data?.stderr ?? null,
+    });
+    return { ok: false, failedStep: step, error: run.error };
+  }
 
-      if (entry.reboot_after) {
-        const restarted = await restartGuest(proxmox, vmid, shell, agentTimeoutMs);
-        if (!restarted.success) {
-          return fail(step, `redémarrage après ${entry.id} : ${restarted.error}`);
-        }
-      }
+  await markStep(formationId, vmid, step, "success", {
+    exitCode: run.data!.exitcode,
+    stdout: run.data!.stdout,
+    stderr: run.data!.stderr,
+  });
+
+  if (entry.reboot_after) {
+    const restarted = await restartGuest(proxmox, vmid, shell, agentTimeoutMs);
+    if (!restarted.success) {
+      return ctx.fail(step, `redémarrage après ${entry.id} : ${restarted.error}`);
     }
+  }
 
-    return { ok: true };
+  return null;
+}
+
+async function runScripts(
+  ctx: VmContext,
+  registry: ScriptRegistry,
+  entries: readonly ScriptEntry[]
+): Promise<ConfigureVmResult> {
+  for (const entry of entries) {
+    const failed = await runScript(ctx, registry, entry);
+    if (failed) return failed;
+  }
+  return { ok: true };
+}
+
+export async function configureVm(options: ConfigureVmOptions): Promise<ConfigureVmResult> {
+  const { proxmox, formationId, vmid, registry, entries, agentTimeoutMs } = options;
+  const shell = registry.shell;
+  const ctx: VmContext = {
+    proxmox,
+    formationId,
+    vmid,
+    shell,
+    paths: guestPaths(shell),
+    agentTimeoutMs,
+    fail: async (step, error) => {
+      await markStep(formationId, vmid, step, "failed", { message: error });
+      return { ok: false, failedStep: step, error };
+    },
   };
 
-  const result = await runScripts();
+  const bootFailed = await bootVm(ctx);
+  if (bootFailed) return bootFailed;
 
-  const removed = await runGuestCommand(proxmox, vmid, removeContextCommand(shell, paths), COMMAND_TIMEOUT_MS);
+  const contextFailed = await writeContext(ctx, options);
+  if (contextFailed) return contextFailed;
+
+  const result = await runScripts(ctx, registry, entries);
+
+  const removed = await runGuestCommand(
+    proxmox,
+    vmid,
+    removeContextCommand(shell, ctx.paths),
+    COMMAND_TIMEOUT_MS
+  );
   if (!removed.success) {
     console.error(`[configure] suppression du contexte échouée vmid=${vmid} : ${removed.error}`);
   }
