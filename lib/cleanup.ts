@@ -29,6 +29,8 @@ async function settleAll(step: string, tasks: Promise<unknown>[], failures: stri
   }
 }
 
+type AdminClient = ReturnType<typeof createAdminClient>;
+
 type GroupLookup = (
   guac: GuacamoleConfig,
   name: string
@@ -139,11 +141,7 @@ async function deleteProxmoxVms(
   }
 }
 
-export async function deleteFormation(formationId: string) {
-  console.log(`[cleanup] Starting formation=${formationId}`);
-  const supabase = createAdminClient();
-  const failures: string[] = [];
-
+async function loadFormation(supabase: AdminClient, formationId: string): Promise<Formation> {
   const { data: formation } = await supabase
     .from("formations")
     .select("*")
@@ -151,10 +149,13 @@ export async function deleteFormation(formationId: string) {
     .single();
 
   if (!formation) throw new Error("Formation not found");
-  const f = formation as Formation;
-  const infra = await resolveInfraForFormation(f);
-  const guac = infra.guacamole;
+  return formation as Formation;
+}
 
+async function markDeletingAndLoadVms(
+  supabase: AdminClient,
+  formationId: string
+): Promise<FormationVm[]> {
   await supabase
     .from("formations")
     .update({ status: "deleting", updated_at: new Date().toISOString() })
@@ -165,7 +166,29 @@ export async function deleteFormation(formationId: string) {
     .select("*")
     .eq("formation_id", formationId);
 
-  const vmList = (vms ?? []) as FormationVm[];
+  return (vms ?? []) as FormationVm[];
+}
+
+function markCleanupFailed(supabase: AdminClient, formationId: string, message: string) {
+  return supabase
+    .from("formations")
+    .update({
+      status: "cleanup_failed",
+      error_message: message,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", formationId);
+}
+
+export async function deleteFormation(formationId: string) {
+  console.log(`[cleanup] Starting formation=${formationId}`);
+  const supabase = createAdminClient();
+  const failures: string[] = [];
+
+  const f = await loadFormation(supabase, formationId);
+  const infra = await resolveInfraForFormation(f);
+  const guac = infra.guacamole;
+  const vmList = await markDeletingAndLoadVms(supabase, formationId);
   console.log(`[cleanup] formation=${f.name} vms=${vmList.length}`);
 
   await deleteGuacUsers(guac, vmList, failures);
@@ -173,29 +196,19 @@ export async function deleteFormation(formationId: string) {
   await deleteGuacConnections(guac, f, vmList, failures);
   await deleteProxmoxVms(infra.proxmox, f, vmList, failures);
 
-  const markCleanupFailed = (message: string) =>
-    supabase
-      .from("formations")
-      .update({
-        status: "cleanup_failed",
-        error_message: message,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", formationId);
-
   if (failures.length > 0) {
     console.error(
       `[cleanup] formation=${formationId} completed with ${failures.length} failures:`,
       failures
     );
-    await markCleanupFailed(failures.join("\n"));
+    await markCleanupFailed(supabase, formationId, failures.join("\n"));
     return;
   }
 
   const { error: dbErr } = await supabase.from("formations").delete().eq("id", formationId);
   if (dbErr) {
     console.error(`[cleanup] DB delete FAILED:`, dbErr.message);
-    await markCleanupFailed(`db delete: ${dbErr.message}`);
+    await markCleanupFailed(supabase, formationId, `db delete: ${dbErr.message}`);
     return;
   }
 

@@ -21,6 +21,56 @@ export async function GET() {
   return NextResponse.json(data);
 }
 
+type ServerClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
+
+// Les scripts n'ont de sens qu'avec un os_id : sans registre, toute sélection est refusée.
+async function resolveScriptIds(
+  osId: string | null | undefined,
+  scriptIds: string[]
+): Promise<{ ids: string[] } | { response: NextResponse }> {
+  if (!osId) {
+    if (scriptIds.length === 0) return { ids: [] };
+    return {
+      response: NextResponse.json(
+        { error: "Des scripts ont été sélectionnés alors que le template n'expose aucun os_id" },
+        { status: 400 }
+      ),
+    };
+  }
+
+  try {
+    const registry = await loadRegistry(osId);
+    return { ids: resolveSelection(registry, scriptIds).map((entry) => entry.id) };
+  } catch (e) {
+    return { response: NextResponse.json({ error: (e as Error).message }, { status: 400 }) };
+  }
+}
+
+// Échec d'insertion des scripts : la formation orpheline est supprimée pour rester cohérent.
+async function insertFormationScripts(
+  supabase: ServerClient,
+  formationId: string,
+  scriptIds: string[]
+): Promise<NextResponse | null> {
+  if (scriptIds.length === 0) return null;
+
+  const { error: scriptsError } = await supabase.from("formation_scripts").insert(
+    scriptIds.map((script_id, position) => ({
+      formation_id: formationId,
+      script_id,
+      position,
+    }))
+  );
+
+  if (!scriptsError) return null;
+
+  await supabase.from("formations").delete().eq("id", formationId);
+  return NextResponse.json(
+    { error: `Enregistrement des scripts impossible : ${scriptsError.message}` },
+    { status: 500 }
+  );
+}
+
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -42,20 +92,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 
-  let resolvedIds: string[] = [];
-  if (formationData.os_id) {
-    try {
-      const registry = await loadRegistry(formationData.os_id);
-      resolvedIds = resolveSelection(registry, script_ids).map((entry) => entry.id);
-    } catch (e) {
-      return NextResponse.json({ error: (e as Error).message }, { status: 400 });
-    }
-  } else if (script_ids.length > 0) {
-    return NextResponse.json(
-      { error: "Des scripts ont été sélectionnés alors que le template n'expose aucun os_id" },
-      { status: 400 }
-    );
-  }
+  const resolved = await resolveScriptIds(formationData.os_id, script_ids);
+  if ("response" in resolved) return resolved.response;
 
   const { data, error } = await supabase
     .from("formations")
@@ -69,23 +107,8 @@ export async function POST(request: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  if (resolvedIds.length > 0) {
-    const { error: scriptsError } = await supabase.from("formation_scripts").insert(
-      resolvedIds.map((script_id, position) => ({
-        formation_id: data.id,
-        script_id,
-        position,
-      }))
-    );
-
-    if (scriptsError) {
-      await supabase.from("formations").delete().eq("id", data.id);
-      return NextResponse.json(
-        { error: `Enregistrement des scripts impossible : ${scriptsError.message}` },
-        { status: 500 }
-      );
-    }
-  }
+  const scriptsFailed = await insertFormationScripts(supabase, data.id, resolved.ids);
+  if (scriptsFailed) return scriptsFailed;
 
   return NextResponse.json(data, { status: 201 });
 }

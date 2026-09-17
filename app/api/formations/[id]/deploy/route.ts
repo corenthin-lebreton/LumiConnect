@@ -3,17 +3,10 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { JobAlreadyQueuedError, enqueue } from "@/lib/queue";
 
-export async function POST(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+type ServerClient = Awaited<ReturnType<typeof createServerSupabaseClient>>;
 
+// Vérifie que la formation existe, est rattachée à une infra et encore en brouillon.
+async function checkDeployable(supabase: ServerClient, id: string): Promise<NextResponse | null> {
   const { data: formation, error } = await supabase
     .from("formations")
     .select("id, status, infra_group_id")
@@ -38,6 +31,11 @@ export async function POST(
     );
   }
 
+  return null;
+}
+
+// Passage draft → deploying conditionnel : une seule requête concurrente l'emporte.
+async function claimDraft(supabase: ServerClient, id: string): Promise<NextResponse | null> {
   const { data: claimed, error: claimErr } = await supabase
     .from("formations")
     .update({ status: "deploying", updated_at: new Date().toISOString() })
@@ -51,7 +49,10 @@ export async function POST(
   if (!claimed || claimed.length === 0) {
     return NextResponse.json({ message: "Already deploying" }, { status: 202 });
   }
+  return null;
+}
 
+async function enqueueOrRollback(id: string): Promise<NextResponse> {
   try {
     await enqueue("deploy", id);
   } catch (err) {
@@ -69,4 +70,24 @@ export async function POST(
   }
 
   return NextResponse.json({ message: "Deployment queued" });
+}
+
+export async function POST(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const notDeployable = await checkDeployable(supabase, id);
+  if (notDeployable) return notDeployable;
+
+  const notClaimed = await claimDraft(supabase, id);
+  if (notClaimed) return notClaimed;
+
+  return enqueueOrRollback(id);
 }

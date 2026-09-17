@@ -181,12 +181,30 @@ async function writeContext(
   return null;
 }
 
+function executeScript(ctx: VmContext, entry: ScriptEntry, content: string) {
+  const { proxmox, vmid, shell, paths, agentTimeoutMs } = ctx;
+  const runOnce = () =>
+    runGuestScript(proxmox, {
+      vmid,
+      shell,
+      remotePath: `${paths.dir}${paths.separator}${entry.id}.${paths.extension}`,
+      content,
+      timeoutMs: entry.timeout_sec * 1000,
+    });
+
+  return entry.reboot_if_pending
+    ? runWithRebootRetry(entry.id, runOnce, () =>
+        restartGuest(proxmox, vmid, shell, agentTimeoutMs)
+      )
+    : runOnce();
+}
+
 async function runScript(
   ctx: VmContext,
   registry: ScriptRegistry,
   entry: ScriptEntry
 ): Promise<ConfigureVmResult | null> {
-  const { proxmox, formationId, vmid, shell, paths, agentTimeoutMs } = ctx;
+  const { proxmox, formationId, vmid, shell, agentTimeoutMs } = ctx;
   const step = scriptStep(entry.id);
   await markStep(formationId, vmid, step, "running");
 
@@ -197,20 +215,7 @@ async function runScript(
     return ctx.fail(step, (e as Error).message);
   }
 
-  const runOnce = () =>
-    runGuestScript(proxmox, {
-      vmid,
-      shell,
-      remotePath: `${paths.dir}${paths.separator}${entry.id}.${paths.extension}`,
-      content,
-      timeoutMs: entry.timeout_sec * 1000,
-    });
-
-  const run = entry.reboot_if_pending
-    ? await runWithRebootRetry(entry.id, runOnce, () =>
-        restartGuest(proxmox, vmid, shell, agentTimeoutMs)
-      )
-    : await runOnce();
+  const run = await executeScript(ctx, entry, content);
 
   if (!run.success) {
     await markStep(formationId, vmid, step, "failed", {
