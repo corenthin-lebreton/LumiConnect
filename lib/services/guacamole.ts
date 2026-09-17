@@ -3,7 +3,6 @@ import { describeFetchError } from "@/lib/services/fetch-error";
 
 const TOKEN_TTL_MS = 10 * 60 * 1000;
 
-
 const tokenCache = new Map<string, { value: string; expiresAt: number }>();
 
 function cacheKey(guac: GuacamoleConfig): string {
@@ -76,6 +75,56 @@ export async function createConnectionGroup(
   }
 }
 
+// Guacamole attend la liste complète des paramètres RDP, même vides, pour ne pas hériter de
+// valeurs par défaut du datasource.
+const RDP_PARAMETER_DEFAULTS: Record<string, string | null> = {
+  "ignore-cert": "true",
+  security: "",
+  "clipboard-encoding": "",
+  "color-depth": "",
+  console: "",
+  "console-audio": "",
+  "create-drive-path": "",
+  "create-recording-path": "",
+  cursor: "",
+  "disable-audio": "",
+  "disable-auth": "",
+  "disable-copy": "",
+  "disable-download": "",
+  "disable-paste": "",
+  "disable-upload": "",
+  dpi: "",
+  "enable-audio": "",
+  "enable-audio-input": "",
+  "enable-desktop-composition": "",
+  "enable-drive": "",
+  "enable-font-smoothing": "",
+  "enable-full-window-drag": "",
+  "enable-menu-animations": "",
+  "enable-printing": "",
+  "enable-theming": "",
+  "enable-touch": "",
+  "enable-wallpaper": "",
+  "force-lossless": "",
+  height: "",
+  "normalize-clipboard": "",
+  "read-only": "",
+  "resize-method": "",
+  "server-layout": "fr-fr-azerty",
+  timezone: null,
+  width: "",
+};
+
+const RDP_ATTRIBUTE_DEFAULTS: Record<string, string> = {
+  "failover-only": "",
+  "guacd-encryption": "",
+  "guacd-hostname": "",
+  "guacd-port": "",
+  "max-connections": "",
+  "max-connections-per-user": "",
+  weight: "",
+};
+
 export async function createRdpConnection(
   guac: GuacamoleConfig,
   name: string,
@@ -97,51 +146,9 @@ export async function createRdpConnection(
           port: String(port),
           username,
           password,
-          "ignore-cert": "true",
-          security: "",
-          "clipboard-encoding": "",
-          "color-depth": "",
-          "console": "",
-          "console-audio": "",
-          "create-drive-path": "",
-          "create-recording-path": "",
-          "cursor": "",
-          "disable-audio": "",
-          "disable-auth": "",
-          "disable-copy": "",
-          "disable-download": "",
-          "disable-paste": "",
-          "disable-upload": "",
-          "dpi": "",
-          "enable-audio": "",
-          "enable-audio-input": "",
-          "enable-desktop-composition": "",
-          "enable-drive": "",
-          "enable-font-smoothing": "",
-          "enable-full-window-drag": "",
-          "enable-menu-animations": "",
-          "enable-printing": "",
-          "enable-theming": "",
-          "enable-touch": "",
-          "enable-wallpaper": "",
-          "force-lossless": "",
-          "height": "",
-          "normalize-clipboard": "",
-          "read-only": "",
-          "resize-method": "",
-          "server-layout": "fr-fr-azerty",
-          "timezone": null,
-          "width": "",
+          ...RDP_PARAMETER_DEFAULTS,
         },
-        attributes: {
-          "failover-only": "",
-          "guacd-encryption": "",
-          "guacd-hostname": "",
-          "guacd-port": "",
-          "max-connections": "",
-          "max-connections-per-user": "",
-          "weight": "",
-        },
+        attributes: RDP_ATTRIBUTE_DEFAULTS,
       }),
     });
     return { success: true, data: { identifier: data.identifier } };

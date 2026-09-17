@@ -18,7 +18,12 @@ export function InfraGroupSelect({ groups, value, onChange }: Props) {
 
   if (groups.length === 0) {
     return (
-      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-warning/50 bg-warning/8 px-4 py-4">
+      <div
+        className={
+          "flex flex-wrap items-center gap-3 rounded-lg border border-dashed " +
+          "border-warning/50 bg-warning/8 px-4 py-4"
+        }
+      >
         <TriangleAlert className="h-4 w-4 shrink-0 text-warning" aria-hidden />
         <p className="flex-1 text-sm leading-relaxed text-muted-foreground">
           Aucun groupe d&apos;infrastructure. Impossible de déployer une formation sans Proxmox,
@@ -43,7 +48,12 @@ export function InfraGroupSelect({ groups, value, onChange }: Props) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           aria-label="Groupe d'infrastructure"
-          className="h-10 w-full appearance-none rounded-md border border-line-strong bg-card px-3 pr-9 text-sm outline-none transition-[border-color,box-shadow] duration-150 hover:border-foreground/30 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
+          className={
+            "h-10 w-full appearance-none rounded-md border border-line-strong bg-card px-3 pr-9 " +
+            "text-sm outline-none transition-[border-color,box-shadow] duration-150 " +
+            "hover:border-foreground/30 focus-visible:border-ring focus-visible:ring-2 " +
+            "focus-visible:ring-ring/25"
+          }
         >
           <option value="" disabled>
             Sélectionner un groupe

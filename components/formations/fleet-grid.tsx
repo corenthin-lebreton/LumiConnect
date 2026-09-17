@@ -101,7 +101,8 @@ export function FleetGrid({ vms, columns, selected, onSelect }: Props) {
               className={cn(
                 "group w-full rounded-md border p-2 text-left outline-none",
                 "transition-[background-color,border-color,color,box-shadow] duration-200 ease-out",
-                "focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                "focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-2",
+                "focus-visible:ring-offset-background",
                 styles.tile,
                 isSelected && "ring-2 ring-ring ring-offset-2 ring-offset-background",
                 onSelect && "press cursor-pointer"

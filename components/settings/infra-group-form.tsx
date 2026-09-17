@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, type FieldErrors, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { ArrowRight, PlugZap } from "lucide-react";
@@ -22,8 +22,31 @@ type Props =
   | { mode: "edit"; group: InfraGroupSummary };
 
 type Values = InfraGroupFormData | InfraGroupPatchData;
+type Form = UseFormReturn<Values>;
+
+interface SectionProps {
+  form: Form;
+  errors: FieldErrors<Values>;
+  secretPlaceholder: string | undefined;
+}
 
 const UNCHANGED = "•••••••• (inchangé)";
+
+const CA_TEXTAREA_CLASS =
+  "mt-1.5 w-full rounded-md border border-line-strong bg-card px-3 py-2 font-mono text-xs " +
+  "outline-none transition-[border-color,box-shadow] duration-150 placeholder:font-sans " +
+  "placeholder:text-muted-foreground/80 hover:border-foreground/30 focus-visible:border-ring " +
+  "focus-visible:ring-2 focus-visible:ring-ring/25";
+
+async function readError(res: Response, fallback: string) {
+  const body = await res.json().catch(() => null);
+  if (typeof body?.error === "string") return body.error;
+  if (body?.error?.fieldErrors) {
+    const first = Object.entries(body.error.fieldErrors as Record<string, string[]>)[0];
+    if (first) return `${first[0]} : ${first[1][0]}`;
+  }
+  return fallback;
+}
 
 function ProbeLine({ label, probe }: { label: string; probe: ServiceProbe }) {
   return (
@@ -35,7 +58,9 @@ function ProbeLine({ label, probe }: { label: string; probe: ServiceProbe }) {
         }`}
       >
         <span
-          className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${probe.ok ? "bg-success" : "bg-destructive"}`}
+          className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${
+            probe.ok ? "bg-success" : "bg-destructive"
+          }`}
           aria-hidden
         />
         <span className="break-all">{probe.ok ? "OK" : (probe.error ?? "Erreur")}</span>
@@ -44,53 +69,320 @@ function ProbeLine({ label, probe }: { label: string; probe: ServiceProbe }) {
   );
 }
 
-export function InfraGroupForm(props: Props) {
+type TextFieldName = Exclude<
+  keyof InfraGroupFormData,
+  "proxmox_ca_pem" | "pfsense_ca_pem" | "proxmox_insecure_tls" | "pfsense_insecure_tls"
+>;
+
+function TextField({
+  form,
+  field,
+  label,
+  error,
+  placeholder,
+  secret = false,
+  hint,
+}: {
+  form: Form;
+  field: TextFieldName;
+  label: string;
+  error: string | undefined;
+  placeholder?: string;
+  secret?: boolean;
+  hint?: React.ReactNode;
+}) {
+  return (
+    <div>
+      <FieldLabel htmlFor={field}>{label}</FieldLabel>
+      <Input
+        id={field}
+        type={secret ? "password" : undefined}
+        autoComplete={secret ? "new-password" : undefined}
+        {...form.register(field)}
+        className="mt-1.5"
+        placeholder={placeholder}
+      />
+      {hint && <FieldHint>{hint}</FieldHint>}
+      <FieldError message={error} />
+    </div>
+  );
+}
+
+function CaTextarea({
+  form,
+  field,
+  error,
+  hint,
+}: {
+  form: Form;
+  field: "proxmox_ca_pem" | "pfsense_ca_pem";
+  error: string | undefined;
+  hint: React.ReactNode;
+}) {
+  return (
+    <div className="md:col-span-2">
+      <FieldLabel htmlFor={field}>Certificat CA (optionnel)</FieldLabel>
+      <textarea
+        id={field}
+        {...form.register(field)}
+        rows={5}
+        spellCheck={false}
+        placeholder="-----BEGIN CERTIFICATE-----"
+        className={CA_TEXTAREA_CLASS}
+      />
+      <FieldHint>{hint}</FieldHint>
+      <FieldError message={error} />
+    </div>
+  );
+}
+
+function InsecureTlsCheckbox({
+  form,
+  field,
+  children,
+}: {
+  form: Form;
+  field: "proxmox_insecure_tls" | "pfsense_insecure_tls";
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 md:col-span-2">
+      <input type="checkbox" {...form.register(field)} className="mt-0.5 h-4 w-4 accent-primary" />
+      <span className="text-sm">
+        Accepter un certificat auto-signé sans CA
+        <span className="block text-xs leading-relaxed text-muted-foreground">{children}</span>
+      </span>
+    </label>
+  );
+}
+
+function ProxmoxSection({ form, errors, secretPlaceholder }: SectionProps) {
+  return (
+    <Section title="Proxmox" description="Jeton d'API dédié, jamais root@pam.">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <TextField
+          form={form}
+          field="proxmox_url"
+          label="URL"
+          error={errors.proxmox_url?.message}
+          placeholder="https://pve.example.com:8006"
+          hint="Base uniquement, sans chemin."
+        />
+        <TextField
+          form={form}
+          field="proxmox_node"
+          label="Nœud"
+          error={errors.proxmox_node?.message}
+          placeholder="pve"
+        />
+        <TextField
+          form={form}
+          field="proxmox_token_id"
+          label="Identifiant du token"
+          error={errors.proxmox_token_id?.message}
+          placeholder="lumiconnect@pve!deploy"
+        />
+        <TextField
+          form={form}
+          field="proxmox_token_secret"
+          label="Secret du token"
+          error={errors.proxmox_token_secret?.message}
+          placeholder={secretPlaceholder}
+          secret
+        />
+        <CaTextarea
+          form={form}
+          field="proxmox_ca_pem"
+          error={errors.proxmox_ca_pem?.message}
+          hint="CA interne de Proxmox : /etc/pve/pve-root-ca.pem sur le nœud. Vide : confiance système."
+        />
+        <InsecureTlsCheckbox form={form} field="proxmox_insecure_tls">
+          Désactive la vérification TLS vers Proxmox : le lien devient interceptable, et le
+          jeton d&apos;API y circule. Préférer la CA ci-dessus quand elle est disponible.
+        </InsecureTlsCheckbox>
+      </div>
+    </Section>
+  );
+}
+
+function PfSenseSection({ form, errors, secretPlaceholder }: SectionProps) {
+  return (
+    <Section title="pfSense" description="API v2 activée, clé API de lecture.">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <TextField
+          form={form}
+          field="pfsense_url"
+          label="URL"
+          error={errors.pfsense_url?.message}
+          placeholder="https://192.168.1.1"
+        />
+        <TextField
+          form={form}
+          field="pfsense_api_key"
+          label="Clé API"
+          error={errors.pfsense_api_key?.message}
+          placeholder={secretPlaceholder}
+          secret
+        />
+        <CaTextarea
+          form={form}
+          field="pfsense_ca_pem"
+          error={errors.pfsense_ca_pem?.message}
+          hint="Pour un certificat auto-signé. Vide : confiance système."
+        />
+        <InsecureTlsCheckbox form={form} field="pfsense_insecure_tls">
+          Désactive la vérification TLS vers pfSense : le lien devient interceptable. Préférer
+          la CA ci-dessus quand elle est disponible.
+        </InsecureTlsCheckbox>
+      </div>
+    </Section>
+  );
+}
+
+function GuacamoleSection({ form, errors, secretPlaceholder }: SectionProps) {
+  return (
+    <Section
+      title="Guacamole"
+      description="Compte administrateur qui crée connexions et utilisateurs."
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <TextField
+          form={form}
+          field="guacamole_url"
+          label="URL"
+          error={errors.guacamole_url?.message}
+          placeholder="http://guac.example.com:8080/guacamole"
+        />
+        <TextField
+          form={form}
+          field="guacamole_datasource"
+          label="Datasource"
+          error={errors.guacamole_datasource?.message}
+          placeholder="postgresql"
+          hint="Identifiant JDBC : « postgresql », jamais « postgres »."
+        />
+        <TextField
+          form={form}
+          field="guacamole_admin_user"
+          label="Utilisateur admin"
+          error={errors.guacamole_admin_user?.message}
+          placeholder="guacadmin"
+        />
+        <TextField
+          form={form}
+          field="guacamole_admin_password"
+          label="Mot de passe admin"
+          error={errors.guacamole_admin_password?.message}
+          placeholder={secretPlaceholder}
+          secret
+        />
+      </div>
+    </Section>
+  );
+}
+
+function ConnectionTestSection({
+  testing,
+  health,
+  onTest,
+}: {
+  testing: boolean;
+  health: InfraHealth | null;
+  onTest: () => void;
+}) {
+  return (
+    <Section
+      title="Connexion"
+      description="Vérifie les trois services avec les valeurs ci-dessus, sans enregistrer."
+    >
+      <div className="space-y-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onTest}
+          disabled={testing}
+          className="gap-1.5"
+        >
+          <PlugZap
+            className={`h-4 w-4 ${testing ? "motion-safe:animate-pulse" : ""}`}
+            aria-hidden
+          />
+          {testing ? "Test en cours…" : "Tester la connexion"}
+        </Button>
+        {health && (
+          <ul className="panel divide-y divide-line overflow-hidden bg-card">
+            <ProbeLine label="Proxmox" probe={health.proxmox} />
+            <ProbeLine label="pfSense" probe={health.pfsense} />
+            <ProbeLine label="Guacamole" probe={health.guacamole} />
+          </ul>
+        )}
+      </div>
+    </Section>
+  );
+}
+
+function SubmitBar({
+  saving,
+  editing,
+  onCancel,
+}: {
+  saving: boolean;
+  editing: boolean;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="grid gap-x-8 border-t border-line py-7 md:grid-cols-[14rem_1fr]">
+      <p className="eyebrow hidden md:block">Validation</p>
+      <div className="flex flex-wrap items-center gap-4">
+        <Button type="submit" size="lg" className="gap-1.5" disabled={saving}>
+          {saving ? "Enregistrement…" : editing ? "Enregistrer" : "Créer le groupe"}
+          {!saving && <ArrowRight className="h-4 w-4" aria-hidden />}
+        </Button>
+        <Button type="button" variant="ghost" size="lg" onClick={onCancel}>
+          Annuler
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          Les secrets sont chiffrés en base et ne sont jamais réaffichés.
+          {editing && " Changer l'URL d'un service demande de ressaisir son secret."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function defaultValues(group: InfraGroupSummary | null): Values {
+  return {
+    name: group?.name ?? "",
+    proxmox_url: group?.proxmox_url ?? "",
+    proxmox_node: group?.proxmox_node ?? "",
+    proxmox_token_id: group?.proxmox_token_id ?? "",
+    proxmox_token_secret: "",
+    proxmox_ca_pem: group?.proxmox_ca_pem ?? "",
+    proxmox_insecure_tls: group?.proxmox_insecure_tls ?? false,
+    pfsense_url: group?.pfsense_url ?? "",
+    pfsense_api_key: "",
+    pfsense_ca_pem: group?.pfsense_ca_pem ?? "",
+    pfsense_insecure_tls: group?.pfsense_insecure_tls ?? false,
+    guacamole_url: group?.guacamole_url ?? "",
+    guacamole_datasource: group?.guacamole_datasource ?? "postgresql",
+    guacamole_admin_user: group?.guacamole_admin_user ?? "",
+    guacamole_admin_password: "",
+  };
+}
+
+function groupEndpoint(groupId: string | null, suffix = ""): string {
+  return groupId ? `/api/infra-groups/${groupId}${suffix}` : `/api/infra-groups${suffix}`;
+}
+
+function useSaveGroup(groupId: string | null) {
   const router = useRouter();
-  const editing = props.mode === "edit";
-  const group = editing ? props.group : null;
-
+  const editing = groupId !== null;
   const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [health, setHealth] = useState<InfraHealth | null>(null);
 
-  const form = useForm<Values>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(editing ? infraGroupPatchSchema : infraGroupSchema) as any,
-    defaultValues: {
-      name: group?.name ?? "",
-      proxmox_url: group?.proxmox_url ?? "",
-      proxmox_node: group?.proxmox_node ?? "",
-      proxmox_token_id: group?.proxmox_token_id ?? "",
-      proxmox_token_secret: "",
-      proxmox_ca_pem: group?.proxmox_ca_pem ?? "",
-      proxmox_insecure_tls: group?.proxmox_insecure_tls ?? false,
-      pfsense_url: group?.pfsense_url ?? "",
-      pfsense_api_key: "",
-      pfsense_ca_pem: group?.pfsense_ca_pem ?? "",
-      pfsense_insecure_tls: group?.pfsense_insecure_tls ?? false,
-      guacamole_url: group?.guacamole_url ?? "",
-      guacamole_datasource: group?.guacamole_datasource ?? "postgresql",
-      guacamole_admin_user: group?.guacamole_admin_user ?? "",
-      guacamole_admin_password: "",
-    },
-  });
-
-  const errors = form.formState.errors;
-
-  async function readError(res: Response, fallback: string) {
-    const body = await res.json().catch(() => null);
-    if (typeof body?.error === "string") return body.error;
-    if (body?.error?.fieldErrors) {
-      const first = Object.entries(body.error.fieldErrors as Record<string, string[]>)[0];
-      if (first) return `${first[0]} : ${first[1][0]}`;
-    }
-    return fallback;
-  }
-
-  async function onSubmit(data: Values) {
+  async function save(data: Values) {
     setSaving(true);
     try {
-      const res = await fetch(editing ? `/api/infra-groups/${group!.id}` : "/api/infra-groups", {
+      const res = await fetch(groupEndpoint(groupId), {
         method: editing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -109,6 +401,14 @@ export function InfraGroupForm(props: Props) {
     }
   }
 
+  return { save, saving, cancel: () => router.push("/parametres") };
+}
+
+// Teste les trois services avec les valeurs saisies, sans enregistrer.
+function useTestGroup(form: Form, groupId: string | null) {
+  const [testing, setTesting] = useState(false);
+  const [health, setHealth] = useState<InfraHealth | null>(null);
+
   async function test() {
     const valid = await form.trigger();
     if (!valid) {
@@ -118,7 +418,7 @@ export function InfraGroupForm(props: Props) {
     setTesting(true);
     setHealth(null);
     try {
-      const res = await fetch(editing ? `/api/infra-groups/${group!.id}/test` : "/api/infra-groups/test", {
+      const res = await fetch(groupEndpoint(groupId, "/test"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form.getValues()),
@@ -135,174 +435,48 @@ export function InfraGroupForm(props: Props) {
     }
   }
 
-  const secretPlaceholder = editing ? UNCHANGED : undefined;
+  return { test, testing, health };
+}
+
+export function InfraGroupForm(props: Props) {
+  const editing = props.mode === "edit";
+  const group = editing ? props.group : null;
+
+  const form = useForm<Values>({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(editing ? infraGroupPatchSchema : infraGroupSchema) as any,
+    defaultValues: defaultValues(group),
+  });
+
+  const { save, saving, cancel } = useSaveGroup(group?.id ?? null);
+  const { test, testing, health } = useTestGroup(form, group?.id ?? null);
+
+  const sectionProps: SectionProps = {
+    form,
+    errors: form.formState.errors,
+    secretPlaceholder: editing ? UNCHANGED : undefined,
+  };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)}>
+    <form onSubmit={form.handleSubmit(save)}>
       <Section title="Groupe" description="Nom affiché lors du choix d'une infrastructure.">
         <div>
           <FieldLabel htmlFor="name">Nom du groupe</FieldLabel>
-          <Input id="name" {...form.register("name")} className="mt-1.5 font-sans" placeholder="ex: Salle Lyon" />
-          <FieldError message={errors.name?.message} />
+          <Input
+            id="name"
+            {...form.register("name")}
+            className="mt-1.5 font-sans"
+            placeholder="ex: Salle Lyon"
+          />
+          <FieldError message={sectionProps.errors.name?.message} />
         </div>
       </Section>
 
-      <Section title="Proxmox" description="Jeton d'API dédié, jamais root@pam.">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <FieldLabel htmlFor="proxmox_url">URL</FieldLabel>
-            <Input id="proxmox_url" {...form.register("proxmox_url")} className="mt-1.5" placeholder="https://pve.example.com:8006" />
-            <FieldHint>Base uniquement, sans chemin.</FieldHint>
-            <FieldError message={errors.proxmox_url?.message} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="proxmox_node">Nœud</FieldLabel>
-            <Input id="proxmox_node" {...form.register("proxmox_node")} className="mt-1.5" placeholder="pve" />
-            <FieldError message={errors.proxmox_node?.message} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="proxmox_token_id">Identifiant du token</FieldLabel>
-            <Input id="proxmox_token_id" {...form.register("proxmox_token_id")} className="mt-1.5" placeholder="lumiconnect@pve!deploy" />
-            <FieldError message={errors.proxmox_token_id?.message} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="proxmox_token_secret">Secret du token</FieldLabel>
-            <Input id="proxmox_token_secret" type="password" autoComplete="new-password" {...form.register("proxmox_token_secret")} className="mt-1.5" placeholder={secretPlaceholder} />
-            <FieldError message={errors.proxmox_token_secret?.message} />
-          </div>
-          <div className="md:col-span-2">
-            <FieldLabel htmlFor="proxmox_ca_pem">Certificat CA (optionnel)</FieldLabel>
-            <textarea
-              id="proxmox_ca_pem"
-              {...form.register("proxmox_ca_pem")}
-              rows={5}
-              spellCheck={false}
-              placeholder="-----BEGIN CERTIFICATE-----"
-              className="mt-1.5 w-full rounded-md border border-line-strong bg-card px-3 py-2 font-mono text-xs outline-none transition-[border-color,box-shadow] duration-150 placeholder:font-sans placeholder:text-muted-foreground/80 hover:border-foreground/30 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
-            />
-            <FieldHint>
-              CA interne de Proxmox : /etc/pve/pve-root-ca.pem sur le nœud. Vide : confiance
-              système.
-            </FieldHint>
-            <FieldError message={errors.proxmox_ca_pem?.message} />
-          </div>
-          <label className="flex cursor-pointer items-start gap-3 md:col-span-2">
-            <input
-              type="checkbox"
-              {...form.register("proxmox_insecure_tls")}
-              className="mt-0.5 h-4 w-4 accent-primary"
-            />
-            <span className="text-sm">
-              Accepter un certificat auto-signé sans CA
-              <span className="block text-xs leading-relaxed text-muted-foreground">
-                Désactive la vérification TLS vers Proxmox : le lien devient interceptable, et le
-                jeton d&apos;API y circule. Préférer la CA ci-dessus quand elle est disponible.
-              </span>
-            </span>
-          </label>
-        </div>
-      </Section>
-
-      <Section title="pfSense" description="API v2 activée, clé API de lecture.">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <FieldLabel htmlFor="pfsense_url">URL</FieldLabel>
-            <Input id="pfsense_url" {...form.register("pfsense_url")} className="mt-1.5" placeholder="https://192.168.1.1" />
-            <FieldError message={errors.pfsense_url?.message} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="pfsense_api_key">Clé API</FieldLabel>
-            <Input id="pfsense_api_key" type="password" autoComplete="new-password" {...form.register("pfsense_api_key")} className="mt-1.5" placeholder={secretPlaceholder} />
-            <FieldError message={errors.pfsense_api_key?.message} />
-          </div>
-          <div className="md:col-span-2">
-            <FieldLabel htmlFor="pfsense_ca_pem">Certificat CA (optionnel)</FieldLabel>
-            <textarea
-              id="pfsense_ca_pem"
-              {...form.register("pfsense_ca_pem")}
-              rows={5}
-              spellCheck={false}
-              placeholder="-----BEGIN CERTIFICATE-----"
-              className="mt-1.5 w-full rounded-md border border-line-strong bg-card px-3 py-2 font-mono text-xs outline-none transition-[border-color,box-shadow] duration-150 placeholder:font-sans placeholder:text-muted-foreground/80 hover:border-foreground/30 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/25"
-            />
-            <FieldHint>Pour un certificat auto-signé. Vide : confiance système.</FieldHint>
-            <FieldError message={errors.pfsense_ca_pem?.message} />
-          </div>
-          <label className="flex cursor-pointer items-start gap-3 md:col-span-2">
-            <input
-              type="checkbox"
-              {...form.register("pfsense_insecure_tls")}
-              className="mt-0.5 h-4 w-4 accent-primary"
-            />
-            <span className="text-sm">
-              Accepter un certificat auto-signé sans CA
-              <span className="block text-xs leading-relaxed text-muted-foreground">
-                Désactive la vérification TLS vers pfSense : le lien devient interceptable. Préférer
-                la CA ci-dessus quand elle est disponible.
-              </span>
-            </span>
-          </label>
-        </div>
-      </Section>
-
-      <Section title="Guacamole" description="Compte administrateur qui crée connexions et utilisateurs.">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <FieldLabel htmlFor="guacamole_url">URL</FieldLabel>
-            <Input id="guacamole_url" {...form.register("guacamole_url")} className="mt-1.5" placeholder="http://guac.example.com:8080/guacamole" />
-            <FieldError message={errors.guacamole_url?.message} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="guacamole_datasource">Datasource</FieldLabel>
-            <Input id="guacamole_datasource" {...form.register("guacamole_datasource")} className="mt-1.5" placeholder="postgresql" />
-            <FieldHint>Identifiant JDBC : « postgresql », jamais « postgres ».</FieldHint>
-            <FieldError message={errors.guacamole_datasource?.message} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="guacamole_admin_user">Utilisateur admin</FieldLabel>
-            <Input id="guacamole_admin_user" {...form.register("guacamole_admin_user")} className="mt-1.5" placeholder="guacadmin" />
-            <FieldError message={errors.guacamole_admin_user?.message} />
-          </div>
-          <div>
-            <FieldLabel htmlFor="guacamole_admin_password">Mot de passe admin</FieldLabel>
-            <Input id="guacamole_admin_password" type="password" autoComplete="new-password" {...form.register("guacamole_admin_password")} className="mt-1.5" placeholder={secretPlaceholder} />
-            <FieldError message={errors.guacamole_admin_password?.message} />
-          </div>
-        </div>
-      </Section>
-
-      <Section title="Connexion" description="Vérifie les trois services avec les valeurs ci-dessus, sans enregistrer.">
-        <div className="space-y-4">
-          <Button type="button" variant="outline" onClick={() => void test()} disabled={testing} className="gap-1.5">
-            <PlugZap className={`h-4 w-4 ${testing ? "motion-safe:animate-pulse" : ""}`} aria-hidden />
-            {testing ? "Test en cours…" : "Tester la connexion"}
-          </Button>
-          {health && (
-            <ul className="panel divide-y divide-line overflow-hidden bg-card">
-              <ProbeLine label="Proxmox" probe={health.proxmox} />
-              <ProbeLine label="pfSense" probe={health.pfsense} />
-              <ProbeLine label="Guacamole" probe={health.guacamole} />
-            </ul>
-          )}
-        </div>
-      </Section>
-
-      <div className="grid gap-x-8 border-t border-line py-7 md:grid-cols-[14rem_1fr]">
-        <p className="eyebrow hidden md:block">Validation</p>
-        <div className="flex flex-wrap items-center gap-4">
-          <Button type="submit" size="lg" className="gap-1.5" disabled={saving}>
-            {saving ? "Enregistrement…" : editing ? "Enregistrer" : "Créer le groupe"}
-            {!saving && <ArrowRight className="h-4 w-4" aria-hidden />}
-          </Button>
-          <Button type="button" variant="ghost" size="lg" onClick={() => router.push("/parametres")}>
-            Annuler
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Les secrets sont chiffrés en base et ne sont jamais réaffichés.
-            {editing && " Changer l'URL d'un service demande de ressaisir son secret."}
-          </p>
-        </div>
-      </div>
+      <ProxmoxSection {...sectionProps} />
+      <PfSenseSection {...sectionProps} />
+      <GuacamoleSection {...sectionProps} />
+      <ConnectionTestSection testing={testing} health={health} onTest={() => void test()} />
+      <SubmitBar saving={saving} editing={editing} onCancel={cancel} />
     </form>
   );
 }

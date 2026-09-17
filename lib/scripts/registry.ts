@@ -82,12 +82,21 @@ function assertConsistent(osId: string, registry: ScriptRegistry, file: string):
     throw new Error(`${file} : os_id « ${registry.os_id} » ne correspond pas au dossier « ${osId} »`);
   }
 
+  const ids = assertUniqueIds(registry, file);
+  assertRequiresExist(registry, ids, file);
+  assertGoldenNotDependsOnPerVm(registry, file);
+}
+
+function assertUniqueIds(registry: ScriptRegistry, file: string): Set<string> {
   const ids = new Set<string>();
   for (const entry of registry.scripts) {
     if (ids.has(entry.id)) throw new Error(`${file} : id dupliqué « ${entry.id} »`);
     ids.add(entry.id);
   }
+  return ids;
+}
 
+function assertRequiresExist(registry: ScriptRegistry, ids: Set<string>, file: string): void {
   for (const entry of registry.scripts) {
     for (const dependency of entry.requires) {
       if (!ids.has(dependency)) {
@@ -98,9 +107,11 @@ function assertConsistent(osId: string, registry: ScriptRegistry, file: string):
       }
     }
   }
+}
 
-  // Un script per_vm tourne sur chaque clone, après que l'image dorée a été figée : une
-  // dépendance vers un script de la dorée serait satisfaite, mais l'inverse jamais.
+// Un script per_vm tourne sur chaque clone, après que l'image dorée a été figée : une
+// dépendance vers un script de la dorée serait satisfaite, mais l'inverse jamais.
+function assertGoldenNotDependsOnPerVm(registry: ScriptRegistry, file: string): void {
   const byId = new Map(registry.scripts.map((entry) => [entry.id, entry]));
   for (const entry of registry.scripts) {
     if (entry.per_vm) continue;

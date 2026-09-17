@@ -35,7 +35,22 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
-    fetchUsers();
+    let cancelled = false;
+    fetch("/api/users")
+      .then(async (res) => {
+        if (cancelled) return;
+        if (res.ok) {
+          setUsers(await res.json());
+          return;
+        }
+        toast.error(await readError(res, "Impossible de charger les comptes"));
+      })
+      .catch(() => {
+        if (!cancelled) toast.error("Impossible de charger les comptes");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleAdd(e: React.FormEvent) {
@@ -139,10 +154,20 @@ export default function UsersPage() {
                 <div className="col-span-2 eyebrow text-right">Action</div>
               </TableHead>
               {users.map((u) => (
-                <div key={u.id} className="grid grid-cols-12 items-center gap-4 px-4 py-2.5 transition-colors duration-150 hover:bg-muted">
+                <div
+                  key={u.id}
+                  className={
+                    "grid grid-cols-12 items-center gap-4 px-4 py-2.5 " +
+                    "transition-colors duration-150 hover:bg-muted"
+                  }
+                >
                   <div className="col-span-7 truncate text-sm font-medium">{u.email}</div>
                   <div className="col-span-3 font-mono text-meta text-muted-foreground tabular">
-                    {new Date(u.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" })}
+                    {new Date(u.created_at).toLocaleDateString("fr-FR", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                    })}
                   </div>
                   <div className="col-span-2 flex justify-end">
                     <Button

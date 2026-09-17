@@ -159,7 +159,9 @@ export async function guestFileWrite(
   if (sanitized.length > FILE_WRITE_MAX_CHARS) {
     return {
       success: false,
-      error: `Contenu de ${sanitized.length} caractères pour ${file} : la limite Proxmox de agent/file-write est ${FILE_WRITE_MAX_CHARS}`,
+      error:
+        `Contenu de ${sanitized.length} caractères pour ${file} : ` +
+        `la limite Proxmox de agent/file-write est ${FILE_WRITE_MAX_CHARS}`,
     };
   }
   try {

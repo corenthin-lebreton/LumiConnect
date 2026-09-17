@@ -63,7 +63,13 @@ export default function LoginPage() {
               Adresse e-mail
             </Label>
             <div className="relative mt-1.5">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Mail
+                className={
+                  "pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 " +
+                  "text-muted-foreground"
+                }
+                aria-hidden
+              />
               <Input
                 id="email"
                 type="email"
@@ -81,7 +87,13 @@ export default function LoginPage() {
               Mot de passe
             </Label>
             <div className="relative mt-1.5">
-              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Lock
+                className={
+                  "pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 " +
+                  "text-muted-foreground"
+                }
+                aria-hidden
+              />
               <Input
                 id="password"
                 type={showPw ? "text" : "password"}
@@ -95,7 +107,11 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPw((v) => !v)}
-                className="absolute right-1 top-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/70"
+                className={
+                  "absolute right-1 top-1 inline-flex h-8 w-8 items-center justify-center " +
+                  "rounded-md text-muted-foreground outline-none transition-colors duration-150 " +
+                  "hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/70"
+                }
                 aria-label={showPw ? "Masquer le mot de passe" : "Afficher le mot de passe"}
               >
                 {showPw ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
@@ -105,7 +121,10 @@ export default function LoginPage() {
           {error && (
             <p
               role="alert"
-              className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive"
+              className={
+                "rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 " +
+                "text-xs font-medium text-destructive"
+              }
             >
               {error}
             </p>

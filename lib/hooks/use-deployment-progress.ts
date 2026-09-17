@@ -47,7 +47,65 @@ interface FormationRow {
   golden_vmid: number | null;
 }
 
-export function useDeploymentProgress(formationId: string | null) {
+type BrowserClient = ReturnType<typeof createClient>;
+
+interface RealtimeHandlers {
+  onStep: (step: VmStep) => void;
+  onFormation: (row: FormationRow) => void;
+}
+
+function subscribeFormation(
+  supabase: BrowserClient,
+  formationId: string,
+  handlers: RealtimeHandlers
+) {
+  return supabase
+    .channel(`formation:${formationId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "vm_steps",
+        filter: `formation_id=eq.${formationId}`,
+      },
+      (payload) => {
+        if (payload.eventType === "DELETE") return;
+        handlers.onStep(payload.new as VmStep);
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "formations",
+        filter: `id=eq.${formationId}`,
+      },
+      (payload) => handlers.onFormation(payload.new as FormationRow)
+    )
+    .subscribe();
+}
+
+async function loadInitialState(supabase: BrowserClient, formationId: string) {
+  const [stepsResult, formationResult] = await Promise.all([
+    supabase
+      .from("vm_steps")
+      .select("*")
+      .eq("formation_id", formationId)
+      .order("vmid")
+      .order("position"),
+    supabase.from("formations").select("status, golden_vmid").eq("id", formationId).single(),
+  ]);
+  return {
+    steps: (stepsResult.data as VmStep[] | null) ?? null,
+    formation: (formationResult.data as FormationRow | null) ?? null,
+  };
+}
+
+// Chargement initial puis abonnement Realtime : chaque étape reçue remplace la précédente
+// pour le même couple (vmid, step).
+function useFormationRealtime(formationId: string | null) {
   const [steps, setSteps] = useState<VmStep[]>([]);
   const [formationStatus, setFormationStatus] = useState<FormationStatus | null>(null);
   const [goldenVmid, setGoldenVmid] = useState<number | null>(null);
@@ -70,62 +128,34 @@ export function useDeploymentProgress(formationId: string | null) {
     const supabase = createClient();
     let cancelled = false;
 
-    void (async () => {
-      const [stepsResult, formationResult] = await Promise.all([
-        supabase
-          .from("vm_steps")
-          .select("*")
-          .eq("formation_id", formationId)
-          .order("vmid")
-          .order("position"),
-        supabase.from("formations").select("status, golden_vmid").eq("id", formationId).single(),
-      ]);
-
+    void loadInitialState(supabase, formationId).then(({ steps, formation }) => {
       if (cancelled) return;
-      if (stepsResult.data) setSteps(stepsResult.data as VmStep[]);
-      if (formationResult.data) {
-        const row = formationResult.data as FormationRow;
-        setFormationStatus(row.status);
-        setGoldenVmid(row.golden_vmid);
+      if (steps) setSteps(steps);
+      if (formation) {
+        setFormationStatus(formation.status);
+        setGoldenVmid(formation.golden_vmid);
       }
-    })();
+    });
 
-    const channel = supabase
-      .channel(`formation:${formationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "vm_steps",
-          filter: `formation_id=eq.${formationId}`,
-        },
-        (payload) => {
-          if (payload.eventType === "DELETE") return;
-          upsert(payload.new as VmStep);
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "formations",
-          filter: `id=eq.${formationId}`,
-        },
-        (payload) => {
-          const row = payload.new as FormationRow;
-          setFormationStatus(row.status);
-          setGoldenVmid(row.golden_vmid ?? null);
-        }
-      )
-      .subscribe();
+    const channel = subscribeFormation(supabase, formationId, {
+      onStep: upsert,
+      onFormation: (row) => {
+        setFormationStatus(row.status);
+        setGoldenVmid(row.golden_vmid ?? null);
+      },
+    });
 
     return () => {
       cancelled = true;
       void supabase.removeChannel(channel);
     };
   }, [formationId, upsert]);
+
+  return { steps, formationStatus, goldenVmid };
+}
+
+export function useDeploymentProgress(formationId: string | null) {
+  const { steps, formationStatus, goldenVmid } = useFormationRealtime(formationId);
 
   // L'image dorée a son propre pipeline (clone complet, installation, arrêt, template) :
   // ses étapes ne doivent pas devenir des colonnes vides sur les pistes des VMs.
@@ -146,7 +176,10 @@ export function useDeploymentProgress(formationId: string | null) {
   const isComplete = formationStatus !== null && TERMINAL.includes(formationStatus);
 
   const failedVmids = useMemo(
-    () => vms.filter((vm) => [...vm.steps.values()].some((s) => s.status === "failed")).map((vm) => vm.vmid),
+    () =>
+      vms
+        .filter((vm) => [...vm.steps.values()].some((s) => s.status === "failed"))
+        .map((vm) => vm.vmid),
     [vms]
   );
 

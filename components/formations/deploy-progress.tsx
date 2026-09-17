@@ -75,7 +75,8 @@ export function DeployProgress({ formationId }: { formationId: string }) {
           <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line px-5 py-3.5">
             <p className="text-sm text-muted-foreground">
               {failed
-                ? `${failedVmids.length} machine${failedVmids.length > 1 ? "s" : ""} n'a pas abouti. Ouvrir sa ligne pour voir l'étape fautive et sa sortie.`
+                ? `${failedVmids.length} machine${failedVmids.length > 1 ? "s" : ""} n'a pas abouti. ` +
+                  "Ouvrir sa ligne pour voir l'étape fautive et sa sortie."
                 : "Le PDF d'identifiants est prêt."}
             </p>
             <div className="flex gap-2 shrink-0">

@@ -14,6 +14,7 @@ export function InfraGroupDelete({ group }: { group: InfraGroupSummary }) {
   const [loading, setLoading] = useState(false);
 
   const blocked = group.formations_count > 0;
+  const plural = group.formations_count > 1 ? "s" : "";
   const isMatch = confirmName === group.name;
 
   async function handleDelete() {
@@ -41,7 +42,8 @@ export function InfraGroupDelete({ group }: { group: InfraGroupSummary }) {
           <p className="text-sm font-semibold text-destructive">Supprimer ce groupe</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {blocked
-              ? `${group.formations_count} formation${group.formations_count > 1 ? "s" : ""} y ${group.formations_count > 1 ? "sont" : "est"} rattachée${group.formations_count > 1 ? "s" : ""}. Les supprimer d'abord.`
+              ? `${group.formations_count} formation${plural} y ${plural ? "sont" : "est"} ` +
+                `rattachée${plural}. Les supprimer d'abord.`
               : "Aucune ressource n'est touchée sur Proxmox, pfSense ou Guacamole : seule la configuration disparaît."}
           </p>
         </div>

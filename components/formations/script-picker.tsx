@@ -198,7 +198,8 @@ function ScriptManifest({
                 className={cn(
                   "flex cursor-pointer gap-3 px-4 py-3.5 transition-colors duration-150",
                   "hover:bg-muted has-[:focus-visible]:bg-muted",
-                  "has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-ring has-[:focus-visible]:-outline-offset-2",
+                  "has-[:focus-visible]:outline has-[:focus-visible]:outline-2",
+                  "has-[:focus-visible]:outline-ring has-[:focus-visible]:-outline-offset-2",
                   isSelected ? "bg-accent" : "bg-card"
                 )}
               >
@@ -211,7 +212,8 @@ function ScriptManifest({
                 <span
                   aria-hidden
                   className={cn(
-                    "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors duration-150",
+                    "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border",
+                    "transition-colors duration-150",
                     isSelected
                       ? "border-primary bg-primary text-primary-foreground"
                       : "border-line-strong bg-card"
