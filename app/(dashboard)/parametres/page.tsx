@@ -119,12 +119,18 @@ export default function ParametresPage() {
                 return (
                   <li
                     key={g.id}
-                    className="group relative grid grid-cols-12 items-center gap-4 px-4 py-3 transition-colors duration-150 hover:bg-muted"
+                    className={
+                      "group relative grid grid-cols-12 items-center gap-4 px-4 py-3 " +
+                      "transition-colors duration-150 hover:bg-muted"
+                    }
                   >
                     <div className="col-span-12 min-w-0 md:col-span-3">
                       <Link
                         href={`/parametres/groupes/${g.id}`}
-                        className="block truncate text-sm font-medium after:absolute after:inset-0 after:content-[''] group-hover:underline group-hover:underline-offset-4"
+                        className={
+                          "block truncate text-sm font-medium after:absolute after:inset-0 " +
+                          "after:content-[''] group-hover:underline group-hover:underline-offset-4"
+                        }
                       >
                         {g.name}
                       </Link>
@@ -163,7 +169,10 @@ export default function ParametresPage() {
                         disabled={state === "loading"}
                         onClick={() => void probe(g.id)}
                       >
-                        <PlugZap className={`h-3.5 w-3.5 ${state === "loading" ? "motion-safe:animate-pulse" : ""}`} aria-hidden />
+                        <PlugZap
+                          className={`h-3.5 w-3.5 ${state === "loading" ? "motion-safe:animate-pulse" : ""}`}
+                          aria-hidden
+                        />
                         Tester
                       </Button>
                     </div>

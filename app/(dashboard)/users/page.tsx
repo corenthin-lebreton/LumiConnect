@@ -156,7 +156,10 @@ export default function UsersPage() {
               {users.map((u) => (
                 <div
                   key={u.id}
-                  className="grid grid-cols-12 items-center gap-4 px-4 py-2.5 transition-colors duration-150 hover:bg-muted"
+                  className={
+                    "grid grid-cols-12 items-center gap-4 px-4 py-2.5 " +
+                    "transition-colors duration-150 hover:bg-muted"
+                  }
                 >
                   <div className="col-span-7 truncate text-sm font-medium">{u.email}</div>
                   <div className="col-span-3 font-mono text-meta text-muted-foreground tabular">

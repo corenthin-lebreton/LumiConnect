@@ -70,7 +70,12 @@ function Output({ label, content }: { label: string; content: string }) {
   return (
     <div className="mt-2">
       <p className="eyebrow mb-1">{label}</p>
-      <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-md border border-line bg-muted p-3 font-mono text-meta leading-relaxed">
+      <pre
+        className={
+          "max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-md border border-line " +
+          "bg-muted p-3 font-mono text-meta leading-relaxed"
+        }
+      >
         {content}
       </pre>
     </div>
@@ -115,7 +120,8 @@ function VmRow({
         aria-expanded={open}
         className={cn(
           "flex w-full items-center gap-4 px-4 py-2.5 text-left transition-colors duration-150",
-          "hover:bg-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2"
+          "hover:bg-muted focus-visible:outline focus-visible:outline-2",
+          "focus-visible:outline-ring focus-visible:-outline-offset-2"
         )}
       >
         <ChevronRight

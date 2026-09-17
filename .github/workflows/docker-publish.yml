@@ -80,7 +80,9 @@ jobs:
           [ -n "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" ] || missing="$missing NEXT_PUBLIC_SUPABASE_URL"
           [ -n "${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" ] || missing="$missing NEXT_PUBLIC_SUPABASE_ANON_KEY"
           if [ -n "$missing" ]; then
-            echo "::error::secrets absents ou vides :$missing — Settings > Secrets and variables > Actions, onglet Secrets (pas Variables), section Repository secrets"
+            hint="Settings > Secrets and variables > Actions, onglet Secrets (pas Variables)"
+            hint="$hint, section Repository secrets"
+            echo "::error::secrets absents ou vides :$missing — $hint"
             exit 1
           fi
 

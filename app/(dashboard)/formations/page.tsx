@@ -126,7 +126,10 @@ function FormationRow({ formation: f }: { formation: FormationRowData }) {
       <div className="min-w-0 flex-1">
         <Link
           href={`/formations/${f.id}`}
-          className="block truncate text-sm font-medium after:absolute after:inset-0 after:content-[''] group-hover:underline group-hover:underline-offset-4"
+          className={
+            "block truncate text-sm font-medium after:absolute after:inset-0 after:content-[''] " +
+            "group-hover:underline group-hover:underline-offset-4"
+          }
         >
           {f.name}
         </Link>

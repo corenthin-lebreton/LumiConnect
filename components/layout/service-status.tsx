@@ -103,7 +103,13 @@ export function ServiceStatus() {
       </Button>
 
       {open && (
-        <div className="panel absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden bg-popover motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-150">
+        <div
+          className={
+            "panel absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden bg-popover " +
+            "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 " +
+            "motion-safe:duration-150"
+          }
+        >
           <div className="flex items-center justify-between border-b border-line bg-muted px-3 py-2">
             <h2 className="eyebrow">État des services</h2>
             <Button
@@ -145,7 +151,9 @@ export function ServiceStatus() {
                             }`}
                           >
                             <span
-                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${status.ok ? "bg-success" : "bg-destructive"}`}
+                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                                status.ok ? "bg-success" : "bg-destructive"
+                              }`}
                               aria-hidden
                             />
                             <span className="truncate" title={status.error}>

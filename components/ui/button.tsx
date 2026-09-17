@@ -25,7 +25,9 @@ const buttonVariants = cva(
         ghost:
           "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
         destructive: "bg-destructive text-white hover:bg-destructive/88",
-        link: "bg-transparent text-foreground underline underline-offset-4 decoration-line-strong hover:decoration-foreground active:scale-100",
+        link:
+          "bg-transparent text-foreground underline underline-offset-4 decoration-line-strong " +
+          "hover:decoration-foreground active:scale-100",
       },
       size: {
         default: "h-9 gap-1.5 px-3.5 text-sm",

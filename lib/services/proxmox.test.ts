@@ -35,7 +35,12 @@ describe("cloneVm", () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url.endsWith("/clone")) {
         cloneCalls++;
-        if (cloneCalls < 3) return new Response("can't lock file '/var/lock/qemu-server/lock-100.conf' - got timeout", { status: 500 });
+        if (cloneCalls < 3) {
+          return new Response(
+            "can't lock file '/var/lock/qemu-server/lock-100.conf' - got timeout",
+            { status: 500 }
+          );
+        }
         return json({ data: "UPID:ok" });
       }
       if (url.endsWith("/tasks/UPID%3Aok/status")) return json({ data: { status: "stopped", exitstatus: "OK" } });

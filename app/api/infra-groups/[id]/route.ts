@@ -78,7 +78,9 @@ export async function DELETE(_request: Request, { params }: Params) {
   if (count && count > 0) {
     return NextResponse.json(
       {
-        error: `${count} formation${count > 1 ? "s" : ""} rattachée${count > 1 ? "s" : ""} à ce groupe. Les supprimer d'abord.`,
+        error:
+          `${count} formation${count > 1 ? "s" : ""} rattachée${count > 1 ? "s" : ""} ` +
+          "à ce groupe. Les supprimer d'abord.",
       },
       { status: 409 }
     );
