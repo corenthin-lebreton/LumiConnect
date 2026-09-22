@@ -84,7 +84,7 @@ const RDP_PARAMETER_DEFAULTS: Record<string, string | null> = {
   "color-depth": "",
   console: "",
   "console-audio": "",
-  "create-drive-path": "",
+  "create-drive-path": "true",
   "create-recording-path": "",
   cursor: "",
   "disable-audio": "",
@@ -97,7 +97,8 @@ const RDP_PARAMETER_DEFAULTS: Record<string, string | null> = {
   "enable-audio": "",
   "enable-audio-input": "",
   "enable-desktop-composition": "",
-  "enable-drive": "",
+  "enable-drive": "true",
+  "drive-name": "Shared",
   "enable-font-smoothing": "",
   "enable-full-window-drag": "",
   "enable-menu-animations": "",
@@ -125,15 +126,23 @@ const RDP_ATTRIBUTE_DEFAULTS: Record<string, string> = {
   weight: "",
 };
 
+export interface RdpConnectionOptions {
+  name: string;
+  hostname: string;
+  port: number;
+  username: string;
+  password: string;
+  groupId: string;
+  // Lecteur réseau du transfert de fichiers : guacd le crée au premier accès
+  // (create-drive-path), un dossier par VM.
+  drivePath: string;
+}
+
 export async function createRdpConnection(
   guac: GuacamoleConfig,
-  name: string,
-  hostname: string,
-  port: number,
-  username: string,
-  password: string,
-  groupId: string
+  options: RdpConnectionOptions
 ): Promise<ServiceResult<{ identifier: string }>> {
+  const { name, hostname, port, username, password, groupId, drivePath } = options;
   try {
     const data = await guacFetch(guac, "/connections", {
       method: "POST",
@@ -146,6 +155,7 @@ export async function createRdpConnection(
           port: String(port),
           username,
           password,
+          "drive-path": drivePath,
           ...RDP_PARAMETER_DEFAULTS,
         },
         attributes: RDP_ATTRIBUTE_DEFAULTS,
