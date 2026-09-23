@@ -8,6 +8,21 @@ Un formateur crée une formation (un template, une plage d'identifiants de VM, u
 machines, une liste de scripts à appliquer) et récupère des postes prêts à l'emploi avec leurs
 comptes d'accès.
 
+## Sommaire
+
+- [Comment ça marche](#comment-ça-marche)
+- [Prérequis](#prérequis)
+- [Installation](#installation)
+- [Variables d'environnement](#variables-denvironnement)
+- [Déploiement derrière Pangolin (HTTPS)](#déploiement-derrière-pangolin-https)
+- [Image Docker](#image-docker)
+- [Premier compte administrateur](#premier-compte-administrateur)
+- [Déroulé d'un déploiement](#déroulé-dun-déploiement)
+- [Vérifier la chaîne guest agent](#vérifier-la-chaîne-guest-agent)
+- [Bibliothèque de scripts](#bibliothèque-de-scripts)
+- [Développement](#développement)
+- [Structure](#structure)
+
 ## Comment ça marche
 
 ```
@@ -90,6 +105,27 @@ Le script crée le groupe, y rattache les formations existantes, reprend
 
 En production, `docker compose up -d --build` construit et lance l'application seule, sans
 service additionnel.
+
+## Variables d'environnement
+
+Toutes vivent dans `.env.local` (voir `.env.example`). Proxmox, pfSense et Guacamole ne s'y
+configurent pas : ils se déclarent en base depuis la page **Paramètres** (voir plus haut).
+
+| Variable | Rôle | Défaut |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL du projet Supabase | — (requis) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clé publique Supabase | — (requis) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Clé de service, usage serveur uniquement | — (requis) |
+| `NEXT_PUBLIC_APP_ORIGIN` | Origine publique (schéma + hôte, sans slash final) | `http://localhost:3000` |
+| `LC_DEV_ORIGINS` | Origines de dev supplémentaires (`hôte[:port]`, virgules) | vide |
+| `LC_ENCRYPTION_KEY` | Chiffrement des secrets en base (`openssl rand -base64 32`) | — (requis) |
+| `LC_WORKER_POLL_MS` | Fréquence de sondage de la file de jobs | `3000` |
+| `LC_WORKER_HEARTBEAT_MS` | Fréquence du heartbeat d'un job en cours | `30000` |
+| `LC_WORKER_STALE_AFTER` | Délai avant qu'un job sans heartbeat soit repris | `00:05:00` |
+| `LC_CLONE_CONCURRENCY` | Clones liés simultanés depuis l'image dorée | `1` |
+| `LC_CONFIGURE_CONCURRENCY` | VMs configurées en parallèle après clonage | `4` |
+| `LC_AGENT_TIMEOUT_SEC` | Attente du guest agent après démarrage d'une VM | `600` |
+| `LC_AGENT_SETTLE_SEC` | Pause après le premier ping agent, avant le premier exec | `90` |
 
 ## Déploiement derrière Pangolin (HTTPS)
 

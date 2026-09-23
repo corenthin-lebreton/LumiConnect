@@ -30,13 +30,18 @@ export interface GuacamoleCredentials {
   guac_connection_id: string;
 }
 
-function slugify(value: string): string {
+export function slugify(value: string): string {
   return value
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+// Dossier du lecteur réseau, unique par VM : /drive/<formation>-<vmid>.
+export function drivePath(formation: Formation, vm: GuacamoleVm): string {
+  return `/drive/${slugify(formation.name)}-${vm.vmid}`;
 }
 
 // Créés une fois par formation, avant les VMs. Les identifiants sont persistés même en cas
@@ -92,15 +97,15 @@ async function createConnection(
   fail: FailFn
 ): Promise<{ connectionId: string } | GuacamoleVmResult> {
   await markStep(formation.id, vm.vmid, CONN_STEP, "running");
-  const connection = await guacamole.createRdpConnection(
-    guac,
-    `${formation.name}-${vm.vmid}`,
-    vm.ip,
-    formation.rdp_port,
-    formation.vm_username,
-    vmPassword,
-    groups.connectionGroupId
-  );
+  const connection = await guacamole.createRdpConnection(guac, {
+    name: `${formation.name}-${vm.vmid}`,
+    hostname: vm.ip,
+    port: formation.rdp_port,
+    username: formation.vm_username,
+    password: vmPassword,
+    groupId: groups.connectionGroupId,
+    drivePath: drivePath(formation, vm),
+  });
   if (!connection.success) return fail(CONN_STEP, connection.error!);
   await markStep(formation.id, vm.vmid, CONN_STEP, "success");
   return { connectionId: connection.data!.identifier };
