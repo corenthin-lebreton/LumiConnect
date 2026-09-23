@@ -51,88 +51,109 @@ export function TemplateCombobox({ templates, value, onChange, disabled = false 
         aria-expanded={open}
         disabled={disabled}
         className={
-          "flex h-10 w-full disabled:cursor-not-allowed disabled:opacity-50 items-center " +
-          "justify-between rounded-md border border-line-strong bg-card px-3 py-2 text-sm " +
-          "outline-none transition-[border-color,box-shadow] duration-150 " +
-          "hover:border-foreground/30 focus-visible:border-ring focus-visible:ring-2 " +
-          "focus-visible:ring-ring/25"
+          "flex h-9 w-full items-center gap-2.5 rounded-md border border-input bg-card pr-2.5 pl-3 " +
+          "text-left text-sm outline-none transition-[border-color,box-shadow] duration-150 " +
+          "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/28 " +
+          "aria-expanded:border-ring aria-expanded:ring-3 aria-expanded:ring-ring/28 " +
+          "disabled:cursor-not-allowed disabled:opacity-50"
         }
       >
         {selected ? (
-          <span className="flex items-center gap-2 truncate">
-            <span className="font-medium">{selected.name}</span>
-            <span className="font-mono text-micro text-muted-foreground tabular">
+          <>
+            <span className="font-mono text-[0.78125rem] font-medium text-muted-foreground tabular">
               {selected.vmid}
             </span>
-          </span>
+            <span className="flex-1 truncate">{selected.name}</span>
+          </>
         ) : (
-          <span className="text-muted-foreground">
-            Sélectionner un template
-          </span>
+          <span className="flex-1 truncate text-muted-foreground">Sélectionner un template</span>
         )}
-        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       </button>
 
       {open && (
         <div
           className={
-            "panel absolute left-0 right-0 top-full z-50 mt-1.5 overflow-hidden bg-popover " +
+            "absolute top-full right-0 left-0 z-50 mt-1.5 overflow-hidden rounded-lg border border-line-strong " +
+            "bg-popover p-1 shadow-[0_14px_32px_-12px_rgba(30,20,10,0.45)] " +
             "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 " +
             "motion-safe:duration-150"
           }
         >
-          <div className="relative border-b border-line bg-muted p-2">
+          <div className="relative p-1">
             <Search
-              className={
-                "pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 " +
-                "text-muted-foreground"
-              }
+              className="pointer-events-none absolute top-1/2 left-3.5 size-[15px] -translate-y-1/2 text-muted-foreground"
               aria-hidden
             />
             <Input
               ref={inputRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher un template…"
-              className="h-8 bg-background pl-9"
+              placeholder="Rechercher un template"
+              aria-label="Rechercher un template"
+              className="h-8 pl-8"
             />
           </div>
-          <div className="max-h-80 divide-y divide-line overflow-y-auto">
+          <div className="max-h-80 overflow-y-auto">
             {filtered.length === 0 ? (
               <div className="px-4 py-6 text-center text-sm text-muted-foreground">
                 Aucun template trouvé
               </div>
             ) : (
-              filtered.map((t) => {
-                const isSelected = t.vmid === value;
-                return (
-                  <button
-                    key={t.vmid}
-                    type="button"
-                    onClick={() => {
-                      onChange(t.vmid);
-                      setOpen(false);
-                      setQuery("");
-                    }}
-                    className={
-                      "flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left " +
-                      `transition-colors duration-150 hover:bg-muted ${isSelected ? "bg-accent" : ""}`
-                    }
-                  >
-                    <span className="flex flex-col gap-0.5 truncate">
-                      <span className="truncate text-sm font-medium">{t.name}</span>
-                      <span className="font-mono text-micro text-muted-foreground tabular">
-                        VMID {t.vmid}
-                      </span>
-                    </span>
-                    {isSelected && <Check className="h-4 w-4 shrink-0" aria-hidden />}
-                  </button>
-                );
-              })
+              groupByFamily(filtered).map(([family, items], index) => (
+                <div key={family} className={index > 0 ? "mt-1 border-t border-line" : undefined}>
+                  <p className="px-2 pt-2 pb-1 font-mono text-[0.625rem] leading-none font-medium tracking-[0.09em] text-muted-foreground uppercase">
+                    {family}
+                  </p>
+                  {items.map((t) => {
+                    const isSelected = t.vmid === value;
+                    return (
+                      <button
+                        key={t.vmid}
+                        type="button"
+                        onClick={() => {
+                          onChange(t.vmid);
+                          setOpen(false);
+                          setQuery("");
+                        }}
+                        className={
+                          "flex w-full items-center gap-2.5 rounded-sm p-2 text-left outline-none " +
+                          "transition-colors duration-150 hover:bg-muted focus-visible:bg-muted " +
+                          (isSelected ? "bg-accent text-accent-foreground hover:bg-accent" : "")
+                        }
+                      >
+                        <span
+                          className={
+                            "w-[34px] shrink-0 font-mono text-xs tabular " +
+                            (isSelected ? "font-medium" : "text-muted-foreground")
+                          }
+                        >
+                          {t.vmid}
+                        </span>
+                        <span className={"flex-1 truncate text-[0.84375rem] " + (isSelected ? "font-medium" : "")}>
+                          {t.name}
+                        </span>
+                        {isSelected && <Check className="size-3.5 shrink-0 [stroke-width:2.25]" aria-hidden />}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))
             )}
           </div>
         </div>
       )}
     </div>
   );
+}
+
+const FAMILY_LABEL: Record<string, string> = { linux: "Linux", windows: "Windows" };
+
+function groupByFamily(templates: ProxmoxTemplate[]): [string, ProxmoxTemplate[]][] {
+  const groups = new Map<string, ProxmoxTemplate[]>();
+  for (const t of templates) {
+    const key = t.os_id ? (FAMILY_LABEL[t.os_id] ?? t.os_id) : "OS non reconnu";
+    groups.set(key, [...(groups.get(key) ?? []), t]);
+  }
+  return [...groups.entries()];
 }

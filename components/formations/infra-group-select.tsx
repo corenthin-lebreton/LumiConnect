@@ -13,15 +13,15 @@ interface Props {
 
 export function InfraGroupSelect({ groups, value, onChange }: Props) {
   if (groups === null) {
-    return <div className="h-10 rounded-md border border-line bg-muted motion-safe:animate-pulse" aria-busy="true" />;
+    return <div className="h-9 rounded-md bg-muted motion-safe:animate-shimmer-soft" aria-busy="true" />;
   }
 
   if (groups.length === 0) {
     return (
       <div
         className={
-          "flex flex-wrap items-center gap-3 rounded-lg border border-dashed " +
-          "border-warning/50 bg-warning/8 px-4 py-4"
+          "flex flex-wrap items-center gap-3 rounded-lg border " +
+          "border-warning/45 bg-warning/8 px-4 py-3.5"
         }
       >
         <TriangleAlert className="h-4 w-4 shrink-0 text-warning" aria-hidden />
@@ -42,17 +42,16 @@ export function InfraGroupSelect({ groups, value, onChange }: Props) {
   const selected = groups.find((g) => g.id === value) ?? null;
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-1.5">
       <div className="relative">
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
           aria-label="Groupe d'infrastructure"
           className={
-            "h-10 w-full appearance-none rounded-md border border-line-strong bg-card px-3 pr-9 " +
+            "h-9 w-full appearance-none rounded-md border border-input bg-card pr-9 pl-3 " +
             "text-sm outline-none transition-[border-color,box-shadow] duration-150 " +
-            "hover:border-foreground/30 focus-visible:border-ring focus-visible:ring-2 " +
-            "focus-visible:ring-ring/25"
+            "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/28"
           }
         >
           <option value="" disabled>
@@ -70,9 +69,8 @@ export function InfraGroupSelect({ groups, value, onChange }: Props) {
         />
       </div>
       {selected && (
-        <p className="font-mono text-micro text-muted-foreground">
-          {selected.proxmox_url.replace(/^https?:\/\//, "")} · nœud {selected.proxmox_node} ·{" "}
-          {selected.guacamole_url.replace(/^https?:\/\//, "")}
+        <p className="truncate text-[0.78125rem] text-muted-foreground">
+          Nœud {selected.proxmox_node} · Guacamole {selected.guacamole_url.replace(/^https?:\/\//, "").split("/")[0]}
         </p>
       )}
     </div>

@@ -2,6 +2,9 @@ import type { ProxmoxConfig, ProxmoxTemplate, ServiceResult } from "@/types";
 import { TEMPLATE_TAG, detectOsFamily, hasTag } from "@/lib/templates";
 import { POLL_INTERVAL_MS, form, pveFetch, sleep } from "@/lib/services/proxmox-api";
 import { describeFetchError } from "@/lib/services/fetch-error";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("proxmox");
 
 interface ProxmoxVmSummary {
   vmid: number;
@@ -73,8 +76,8 @@ async function requestClone(
     } catch (e) {
       lastError = e as Error;
       if (!LOCK_ERROR.test(lastError.message) || attempt === CLONE_ATTEMPTS) throw lastError;
-      console.warn(
-        `[proxmox] clone de ${templateId} verrouillé (tentative ${attempt}/${CLONE_ATTEMPTS}) : ${lastError.message}`
+      log.warn(
+        `clone de ${templateId} verrouillé (tentative ${attempt}/${CLONE_ATTEMPTS}) : ${lastError.message}`
       );
       await sleep(CLONE_RETRY_DELAY_MS * attempt);
     }
@@ -226,7 +229,7 @@ export async function deleteVm(proxmox: ProxmoxConfig, vmid: number): Promise<Se
 
     const stopResult = await stopVm(proxmox, vmid);
     if (!stopResult.success) {
-      console.error(`[proxmox] stopVm failed vmid=${vmid}, aborting delete:`, stopResult.error);
+      log.error(`stopVm failed vmid=${vmid}, aborting delete:`, stopResult.error);
       return { success: false, error: `stop failed: ${stopResult.error}` };
     }
     await pveFetch(proxmox, `/nodes/${proxmox.node}/qemu/${vmid}`, { method: "DELETE" });

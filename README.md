@@ -126,6 +126,7 @@ configurent pas : ils se déclarent en base depuis la page **Paramètres** (voir
 | `LC_CONFIGURE_CONCURRENCY` | VMs configurées en parallèle après clonage | `4` |
 | `LC_AGENT_TIMEOUT_SEC` | Attente du guest agent après démarrage d'une VM | `600` |
 | `LC_AGENT_SETTLE_SEC` | Pause après le premier ping agent, avant le premier exec | `90` |
+| `LC_LOG_LEVEL` | Verbosité des logs serveur (`debug`, `info`, `warn`, `error`, `silent`) | `info` |
 
 ## Déploiement derrière Pangolin (HTTPS)
 

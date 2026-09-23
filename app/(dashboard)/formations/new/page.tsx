@@ -3,11 +3,8 @@ import { ConsoleHead } from "@/components/layout/console-head";
 
 export default function NewFormationPage() {
   return (
-    <div className="space-y-7">
-      <ConsoleHead
-        eyebrow="Nouvelle entrée"
-        title="Créer une formation"
-      />
+    <div className="space-y-6">
+      <ConsoleHead back={{ href: "/formations", label: "Formations" }} title="Nouvelle formation" />
       <CreationForm />
     </div>
   );

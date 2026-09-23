@@ -12,6 +12,9 @@ import { loadScriptContent, type ScriptEntry, type ScriptRegistry } from "@/lib/
 import { markStep } from "@/lib/progress";
 import type { StepDefinition } from "@/lib/progress";
 import type { ProxmoxConfig } from "@/types";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("configure");
 
 const START_STEP = "start";
 const AGENT_STEP = "wait_agent";
@@ -286,7 +289,7 @@ export async function configureVm(options: ConfigureVmOptions): Promise<Configur
     COMMAND_TIMEOUT_MS
   );
   if (!removed.success) {
-    console.error(`[configure] suppression du contexte échouée vmid=${vmid} : ${removed.error}`);
+    log.error(`suppression du contexte échouée vmid=${vmid} : ${removed.error}`);
   }
 
   return result;

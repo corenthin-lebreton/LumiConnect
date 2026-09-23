@@ -48,8 +48,7 @@ ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL} \
     NEXT_PUBLIC_APP_ORIGIN=${NEXT_PUBLIC_APP_ORIGIN} \
     NODE_ENV=production
 
-# Secret facultatif : variables supplementaires disponibles pendant le build
-# seulement (jamais ecrites dans une couche).
+
 RUN --mount=type=secret,id=env,target=/app/.env.production,required=false \
     pnpm run build
 
@@ -73,19 +72,14 @@ ENV NODE_ENV=production \
 
 WORKDIR /app
 
-# tini : PID 1 qui propage SIGTERM et moissonne les zombies (l'arret laisse la
-# boucle de jobs se terminer, cf. stop_grace_period).
-# npm et npx sont retires : inutiles au runtime, et autant d'outils en moins a
-# disposition d'un attaquant. Le healthcheck utilise le fetch natif de Node,
-# donc aucun client HTTP supplementaire n'est installe.
+
 RUN apk upgrade --no-cache \
     && apk add --no-cache tini \
     && rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
     && addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 --ingroup nodejs --shell /sbin/nologin nextjs
 
-# Le code reste la propriete de root en lecture seule : le processus applicatif
-# ne peut pas se reecrire lui-meme. Seul .next/cache appartient a nextjs.
+
 COPY --from=builder --chown=root:root /app/public ./public
 COPY --from=builder --chown=root:root /app/.next/standalone ./
 COPY --from=builder --chown=root:root /app/.next/static ./.next/static

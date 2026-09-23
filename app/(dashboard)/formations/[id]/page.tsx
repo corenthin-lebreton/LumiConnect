@@ -2,21 +2,51 @@ import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Play, Download, Trash2 } from "lucide-react";
-import { ConsoleHead, ReadoutStrip, Slab, TableHead } from "@/components/layout/console-head";
+import { Download, Play, SquareTerminal, Trash2, TriangleAlert, RotateCw } from "lucide-react";
+import { ConsoleHead, ReadoutStrip } from "@/components/layout/console-head";
 import { StatusPill } from "@/components/formations/status-pill";
 import { DeploymentTrace } from "@/components/formations/deployment-trace";
-import { cn } from "@/lib/utils";
-import type { FormationStatus, VmStatus } from "@/types";
+import { AccessTable } from "@/components/formations/access-table";
+import type { FormationStatus, FormationVm } from "@/types";
 import { loadInfraRow } from "@/lib/infra/groups";
 
-const vmTone: Record<VmStatus, { rail: string; text: string; label: string }> = {
-  pending: { rail: "bg-muted-foreground/30", text: "text-muted-foreground", label: "En attente" },
-  cloning: { rail: "bg-running", text: "text-running", label: "Clone" },
-  configuring: { rail: "bg-running", text: "text-running", label: "Configuration" },
-  ready: { rail: "bg-success", text: "text-success", label: "Prête" },
-  failed: { rail: "bg-destructive", text: "text-destructive", label: "Échec" },
-};
+function formatRam(mb: number): string {
+  const gb = mb / 1024;
+  return Number.isInteger(gb) ? `${gb} Go` : `${mb} Mo`;
+}
+
+function ReadyBar({ ready, failed, total }: { ready: number; failed: number; total: number }) {
+  if (total === 0) return null;
+  const rest = Math.max(total - ready - failed, 0);
+  return (
+    <span className="flex h-1 gap-0.5" aria-hidden>
+      {ready > 0 && <span className="rounded-full bg-success" style={{ flex: ready }} />}
+      {failed > 0 && <span className="rounded-full bg-destructive" style={{ flex: failed }} />}
+      {rest > 0 && <span className="rounded-full bg-line-strong" style={{ flex: rest }} />}
+    </span>
+  );
+}
+
+function CleanupBanner({ id, message }: { id: string; message: string | null }) {
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-warning/45 bg-warning/8 px-4 py-3.5 sm:flex-row sm:items-start">
+      <TriangleAlert className="mt-px size-[18px] shrink-0 text-warning" aria-hidden />
+      <div className="flex flex-1 flex-col gap-1">
+        <span className="text-sm font-semibold">Le nettoyage n’a pas abouti</span>
+        <span className="text-[0.8125rem] leading-relaxed text-pretty text-muted-foreground">
+          La formation reste visible tant que le nettoyage n’est pas complet.
+          {message && <span className="mt-1 block font-mono text-xs">{message}</span>}
+        </span>
+      </div>
+      <Link href={`/formations/${id}/delete`} className="shrink-0">
+        <Button size="sm" className="h-8">
+          <RotateCw className="size-[15px]" aria-hidden />
+          Relancer le nettoyage
+        </Button>
+      </Link>
+    </div>
+  );
+}
 
 export default async function FormationDetailPage({
   params,
@@ -34,9 +64,7 @@ export default async function FormationDetailPage({
 
   if (!formation) notFound();
 
-  const groupName = formation.infra_group_id
-    ? (await loadInfraRow(formation.infra_group_id))?.name ?? null
-    : null;
+  const group = formation.infra_group_id ? await loadInfraRow(formation.infra_group_id) : null;
 
   const { data: vmRows } = await supabase
     .from("formation_vms")
@@ -44,154 +72,144 @@ export default async function FormationDetailPage({
     .eq("formation_id", id)
     .order("vmid");
 
-  const vms = vmRows ?? [];
+  const vms = (vmRows ?? []) as FormationVm[];
   const vmCount = formation.vm_end_id - formation.vm_start_id + 1;
   const ready = vms.filter((vm) => vm.status === "ready").length;
+  const failed = vms.filter((vm) => vm.status === "failed").length;
+  const status = formation.status as FormationStatus;
+  const pdfReady = status === "deployed" || status === "failed";
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <ConsoleHead
-        eyebrow={formation.os_id ?? "OS non déduit"}
+        back={{ href: "/formations", label: "Formations" }}
+        eyebrow={[formation.os_id ?? "OS non déduit", formation.template_name].filter(Boolean).join(" · ")}
         title={formation.name}
         status={
-          <div className="flex flex-wrap items-center gap-3">
-            <StatusPill status={formation.status as FormationStatus} />
-            {formation.error_message && (
-              <span className="font-mono text-micro text-destructive">
-                {formation.error_message}
-              </span>
-            )}
-          </div>
+          <StatusPill status={status} detail={status === "deploying" ? `${ready}/${vmCount}` : undefined} />
+        }
+        subtitle={
+          formation.error_message && status !== "cleanup_failed" ? (
+            <span className="font-mono text-xs text-destructive">{formation.error_message}</span>
+          ) : undefined
         }
         actions={
           <>
-            {formation.status === "draft" && (
+            {status === "draft" && (
               <Link href={`/formations/${id}/deploy`}>
-                <Button size="lg" className="gap-1.5">
-                  <Play className="h-4 w-4" aria-hidden />
+                <Button>
+                  <Play className="size-4" aria-hidden />
                   Déployer
                 </Button>
               </Link>
             )}
-            {(formation.status === "deployed" || formation.status === "failed") && (
+            {status === "deploying" && (
+              <Link href={`/formations/${id}/deploy`}>
+                <Button variant="outline">
+                  <SquareTerminal className="size-4" aria-hidden />
+                  Suivre le déploiement
+                </Button>
+              </Link>
+            )}
+            {pdfReady ? (
               <a href={`/api/formations/${id}/pdf`}>
-                <Button variant="outline" size="lg" className="gap-1.5">
-                  <Download className="h-4 w-4" aria-hidden />
-                  PDF
+                <Button variant="outline">
+                  <Download className="size-4" aria-hidden />
+                  PDF des identifiants
                 </Button>
               </a>
-            )}
-            <Link href={`/formations/${id}/delete`}>
-              <Button variant="ghost" size="lg" className="gap-1.5 hover:text-destructive">
-                <Trash2 className="h-4 w-4" aria-hidden />
-                Supprimer
+            ) : (
+              <Button variant="outline" disabled title="Disponible quand toutes les VMs sont prêtes">
+                <Download className="size-4" aria-hidden />
+                PDF des identifiants
               </Button>
-            </Link>
+            )}
+            {status !== "deleting" && (
+              <Link href={`/formations/${id}/delete`} aria-label="Supprimer la formation">
+                <Button variant="destructive-outline" size="icon" tabIndex={-1}>
+                  <Trash2 className="size-4" aria-hidden />
+                </Button>
+              </Link>
+            )}
           </>
         }
+      />
+
+      {status === "cleanup_failed" && <CleanupBanner id={id} message={formation.error_message} />}
+
+      <ReadoutStrip
+        className="lg:grid-cols-[1.2fr_1fr_1fr_1.1fr_1.1fr]"
         readouts={[
           {
             label: "Machines prêtes",
-            value: `${ready}/${vmCount}`,
-            tone: vmCount > 0 && ready === vmCount ? "success" : "default",
+            tone: "success",
+            value: (
+              <span className="flex items-baseline gap-1.5">
+                {ready}
+                <span className="text-[0.9375rem] font-normal text-muted-foreground">/ {vmCount}</span>
+              </span>
+            ),
+            footer: <ReadyBar ready={ready} failed={failed} total={vmCount} />,
           },
           {
             label: "Plage VMID",
-            value: String(formation.vm_start_id),
-            sub: `jusqu'à ${formation.vm_end_id}`,
+            mono: true,
+            value: `${formation.vm_start_id}–${formation.vm_end_id}`,
           },
           {
             label: "CPU par VM",
-            value: String(formation.cpu_cores),
-            sub: `${formation.ram_mb} Mo de RAM`,
+            value: (
+              <span className="flex items-baseline gap-2">
+                {formation.cpu_cores}
+                <span className="font-mono text-[0.8125rem] font-normal text-muted-foreground">
+                  cores · {formatRam(formation.ram_mb)}
+                </span>
+              </span>
+            ),
           },
           {
             label: "Template",
-            value: String(formation.template_vmid),
+            mono: true,
+            value: formation.template_name ?? String(formation.template_vmid),
             sub: formation.golden_vmid
-              ? `image dorée VMID ${formation.golden_vmid}`
-              : (formation.template_name ?? "nom non enregistré"),
+              ? `VMID ${formation.template_vmid} · image dorée ${formation.golden_vmid}`
+              : `VMID ${formation.template_vmid}`,
           },
           {
             label: "Infrastructure",
-            value: groupName ?? "aucune",
-            tone: groupName ? "default" : "warning",
-            sub: groupName ? "groupe de déploiement" : "rattacher un groupe avant tout déploiement",
+            value: (
+              <span className="block truncate text-[0.9375rem] leading-tight font-medium">
+                {group?.name ?? "aucune"}
+              </span>
+            ),
+            tone: group ? undefined : "warning",
+            sub: group ? group.proxmox_node : "rattacher un groupe avant tout déploiement",
           },
         ]}
       />
 
+      {vms.length > 0 && <AccessTable vms={vms} />}
+
       <DeploymentTrace formationId={id} />
 
       {vms.length > 0 && (
-        <Slab
-          title={`Accès (${vms.length})`}
-          aside={
-            <p className="text-micro text-muted-foreground">Mots de passe dans le PDF</p>
-          }
-        >
-          <TableHead>
-            <span className="w-0.5" aria-hidden />
-            <span className="eyebrow w-16">VMID</span>
-            <span className="eyebrow w-32">Adresse IP</span>
-            <span className="eyebrow flex-1">Adresse MAC</span>
-            <span className="eyebrow flex-1">Compte Guacamole</span>
-            <span className="eyebrow w-28 text-right">État</span>
-          </TableHead>
-
-          <ul className="divide-y divide-line">
-            {vms.map((vm) => {
-              const tone = vmTone[vm.status as VmStatus] ?? vmTone.pending;
-              return (
-                <li
-                  key={vm.id}
-                  className="flex items-center gap-4 px-4 py-2.5 transition-colors duration-150 hover:bg-muted"
-                >
-                  <span
-                    className={cn("h-6 w-0.5 shrink-0 rounded-full", tone.rail)}
-                    aria-hidden
-                  />
-                  <span className="w-16 font-mono text-sm font-medium tabular">{vm.vmid}</span>
-                  <span className="w-32 font-mono text-meta tabular">{vm.ip ?? "-"}</span>
-                  <span className="hidden flex-1 truncate font-mono text-micro text-muted-foreground md:block">
-                    {vm.mac_address ?? "-"}
-                  </span>
-                  <span className="hidden flex-1 truncate font-mono text-meta md:block">
-                    {vm.guac_username ?? "-"}
-                  </span>
-                  <span
-                    className={cn(
-                      "w-28 text-right font-mono text-micro uppercase tracking-[0.06em]",
-                      tone.text
-                    )}
-                  >
-                    {tone.label}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </Slab>
-      )}
-
-      {vms.length > 0 && (
         <section className="space-y-3">
-          <h2 className="display text-base">Ressources externes</h2>
+          <h2 className="text-[1.0625rem] leading-6 font-semibold">Ressources externes</h2>
           <ReadoutStrip
             readouts={[
               {
                 label: "Clones Proxmox",
-                value: String(vms.filter((v) => v.mac_address).length),
+                value: vms.filter((v) => v.mac_address).length,
                 sub: `template ${formation.template_vmid}`,
               },
               {
-                label: "Connexions RDP",
-                value: String(vms.filter((v) => v.guac_connection_id).length),
+                label: "Connexions Guacamole",
+                value: vms.filter((v) => v.guac_connection_id).length,
                 sub: formation.guac_user_group ?? "groupe non créé",
               },
               {
                 label: "Comptes stagiaires",
-                value: String(vms.filter((v) => v.guac_username).length),
+                value: vms.filter((v) => v.guac_username).length,
                 sub: "un par machine",
               },
             ]}

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { ArrowRight, Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -29,7 +29,11 @@ export default function LoginPage() {
     });
 
     if (error) {
-      setError(error.message);
+      setError(
+        error.message === "Invalid login credentials"
+          ? "Identifiants incorrects. Vérifiez l’adresse et réessayez."
+          : error.message
+      );
       setLoading(false);
       return;
     }
@@ -39,61 +43,53 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full max-w-sm">
+    <div className="flex w-full max-w-[400px] flex-col gap-7">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
 
-      <div className="mb-7">
-        <p className="eyebrow">Lumixen</p>
-        <h1 className="display mt-2 text-2xl">LumiConnect</h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
-          Console interne, accès restreint aux formateurs.
-        </p>
+      <div className="flex items-center gap-3">
+        <div
+          className={
+            "grid size-9 place-items-center rounded-lg bg-primary font-mono text-sm font-semibold " +
+            "text-primary-foreground"
+          }
+          aria-hidden
+        >
+          LC
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-lg leading-none font-semibold">LumiConnect</span>
+          <span className="font-mono text-[0.625rem] leading-none font-medium tracking-[0.12em] text-muted-foreground uppercase">
+            Lumixen · environnements de formation
+          </span>
+        </div>
       </div>
 
-      <div className="panel bg-card p-5">
-        <h2 className="display text-base">Connexion</h2>
-        <p className="mt-1 mb-5 text-sm text-muted-foreground">
-          Authentifiez-vous avec votre compte formateur.
-        </p>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <Label htmlFor="email" className="eyebrow">
-              Adresse e-mail
-            </Label>
-            <div className="relative mt-1.5">
-              <Mail
-                className={
-                  "pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 " +
-                  "text-muted-foreground"
-                }
-                aria-hidden
-              />
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-                className="h-10 pl-9"
-                placeholder="prenom.nom@lumixen.fr"
-              />
-            </div>
+      <div className="flex flex-col gap-5 rounded-xl border border-line-strong bg-card p-7 shadow-[0_1px_0_var(--line)]">
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-[1.375rem] leading-tight font-semibold">Connexion</h1>
+          <p className="text-[0.84375rem] leading-snug text-muted-foreground">
+            Accès réservé aux formateurs et administrateurs Lumixen.
+          </p>
+        </div>
+        <form onSubmit={handleLogin} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="email">Adresse e-mail</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              className="h-[38px]"
+              placeholder="prenom.nom@lumixen.fr"
+            />
           </div>
-          <div>
-            <Label htmlFor="password" className="eyebrow">
-              Mot de passe
-            </Label>
-            <div className="relative mt-1.5">
-              <Lock
-                className={
-                  "pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 " +
-                  "text-muted-foreground"
-                }
-                aria-hidden
-              />
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="password">Mot de passe</Label>
+            <div className="relative">
               <Input
                 id="password"
                 type={showPw ? "text" : "password"}
@@ -101,41 +97,36 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="h-10 pl-9 pr-10"
+                className="h-[38px] pr-10"
                 placeholder="••••••••••"
               />
               <button
                 type="button"
                 onClick={() => setShowPw((v) => !v)}
                 className={
-                  "absolute right-1 top-1 inline-flex h-8 w-8 items-center justify-center " +
-                  "rounded-md text-muted-foreground outline-none transition-colors duration-150 " +
-                  "hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/70"
+                  "absolute top-[3px] right-[3px] grid size-8 place-items-center rounded-md text-muted-foreground " +
+                  "outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 }
                 aria-label={showPw ? "Masquer le mot de passe" : "Afficher le mot de passe"}
               >
-                {showPw ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+                {showPw ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
               </button>
             </div>
           </div>
+          <Button type="submit" className="h-10 w-full text-sm" disabled={loading}>
+            {loading ? "Connexion…" : "Se connecter"}
+          </Button>
           {error && (
             <p
               role="alert"
-              className={
-                "rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 " +
-                "text-xs font-medium text-destructive"
-              }
+              className="flex items-start gap-2.5 rounded-md bg-destructive/10 px-3 py-2.5 text-[0.8125rem] leading-snug text-destructive"
             >
+              <span className="mt-[5px] size-[7px] shrink-0 rounded-[2px] bg-destructive" aria-hidden />
               {error}
             </p>
           )}
-          <Button type="submit" size="lg" className="w-full gap-1.5" disabled={loading}>
-            {loading ? "Connexion…" : "Se connecter"}
-            {!loading && <ArrowRight className="h-4 w-4" aria-hidden />}
-          </Button>
         </form>
       </div>
-
     </div>
   );
 }

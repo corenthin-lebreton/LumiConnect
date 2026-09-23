@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { notFound } from "next/navigation";
 import { toast } from "sonner";
 import { ConsoleHead } from "@/components/layout/console-head";
@@ -8,9 +8,13 @@ import { InfraGroupForm } from "@/components/settings/infra-group-form";
 import { InfraGroupDelete } from "@/components/settings/infra-group-delete";
 import type { InfraGroupSummary } from "@/types";
 
+const BACK = { href: "/parametres", label: "Paramètres" };
+
 export default function EditInfraGroupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [group, setGroup] = useState<InfraGroupSummary | null | "missing">(null);
+  const [deleting, setDeleting] = useState(false);
+  const deleteRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch(`/api/infra-groups/${id}`)
@@ -26,28 +30,36 @@ export default function EditInfraGroupPage({ params }: { params: Promise<{ id: s
       .catch(() => toast.error("Impossible de charger le groupe"));
   }, [id]);
 
+  useEffect(() => {
+    if (deleting) deleteRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [deleting]);
+
   if (group === "missing") notFound();
 
   if (group === null) {
     return (
-      <div className="space-y-8" aria-busy="true">
-        <ConsoleHead eyebrow="Paramètres" title="Chargement…" />
+      <div className="space-y-6" aria-busy="true">
+        <ConsoleHead back={BACK} eyebrow="Groupe d’infrastructure" title="Chargement…" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <ConsoleHead
-        eyebrow="Paramètres"
+        back={BACK}
+        eyebrow="Groupe d’infrastructure"
         title={group.name}
-        readouts={[
-          { label: "Formations", value: String(group.formations_count), sub: "rattachées à ce groupe" },
-          { label: "Nœud Proxmox", value: group.proxmox_node, sub: group.proxmox_url.replace(/^https?:\/\//, "") },
-        ]}
+        subtitle={`${group.formations_count} formation${group.formations_count > 1 ? "s" : ""} rattachée${
+          group.formations_count > 1 ? "s" : ""
+        } · nœud ${group.proxmox_node}`}
       />
-      <InfraGroupForm mode="edit" group={group} />
-      <InfraGroupDelete group={group} />
+      <InfraGroupForm mode="edit" group={group} onDelete={() => setDeleting(true)} />
+      {deleting && (
+        <div ref={deleteRef} className="max-w-[600px]">
+          <InfraGroupDelete group={group} />
+        </div>
+      )}
     </div>
   );
 }

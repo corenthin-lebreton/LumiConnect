@@ -36,7 +36,7 @@ function Slider({
         <SliderPrimitive.Track
           data-slot="slider-track"
           className={cn(
-            "relative grow overflow-hidden rounded-full bg-muted select-none",
+            "relative grow overflow-hidden rounded-full bg-line-strong select-none",
             "data-horizontal:h-1 data-horizontal:w-full data-vertical:h-full data-vertical:w-1"
           )}
         >
@@ -50,8 +50,8 @@ function Slider({
             data-slot="slider-thumb"
             key={index}
             className={cn(
-              "relative block size-3.5 shrink-0 rounded-full border-2 border-background",
-              "bg-foreground ring-ring/40 transition-[box-shadow] select-none",
+              "relative block size-4 shrink-0 rounded-full border-2 border-primary shadow-sm",
+              "bg-card ring-ring/40 transition-[box-shadow] select-none",
               "after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3",
               "focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none",
               "disabled:opacity-50"

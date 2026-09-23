@@ -9,32 +9,34 @@ const buttonVariants = cva(
     "border border-transparent font-medium whitespace-nowrap select-none outline-none",
     "transition-[background-color,border-color,color,transform] duration-150 ease-out",
     "active:scale-[0.985] motion-reduce:active:scale-100",
-    "focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    "disabled:pointer-events-none disabled:opacity-40",
+    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "disabled:pointer-events-none disabled:opacity-50",
     "aria-invalid:border-destructive",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   ].join(" "),
   {
     variants: {
       variant: {
-        default:
-          "bg-primary text-primary-foreground hover:bg-primary/88",
-        outline:
-          "border-line-strong bg-card text-foreground hover:bg-muted hover:border-line-strong",
+        default: "bg-primary text-primary-foreground hover:brightness-106",
+        outline: "border-line-strong bg-card text-foreground hover:bg-muted",
         secondary: "bg-secondary text-secondary-foreground hover:bg-accent",
-        ghost:
-          "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
-        destructive: "bg-destructive text-white hover:bg-destructive/88",
+        ghost: "bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+        destructive: "bg-destructive text-destructive-foreground hover:brightness-106",
+        "destructive-outline":
+          "border-line-strong bg-card text-destructive hover:bg-destructive/10",
+        "destructive-ghost":
+          "bg-transparent text-muted-foreground hover:bg-destructive/12 hover:text-destructive",
         link:
           "bg-transparent text-foreground underline underline-offset-4 decoration-line-strong " +
           "hover:decoration-foreground active:scale-100",
       },
       size: {
-        default: "h-9 gap-1.5 px-3.5 text-sm",
+        default: "h-[34px] gap-2 px-3.5 text-[0.84375rem]",
         xs: "h-6 gap-1 px-2 text-xs [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-8 gap-1.5 px-3 text-[0.8rem] [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-10 gap-2 px-4.5 text-sm",
-        icon: "size-9",
+        sm: "h-[30px] gap-2 px-2.5 text-[0.8125rem] [&_svg:not([class*='size-'])]:size-[15px]",
+        lg: "h-[38px] gap-2 px-4 text-sm",
+        xl: "h-[46px] gap-2 rounded-lg px-4 text-[0.90625rem]",
+        icon: "size-[34px]",
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-8",
         "icon-lg": "size-11",

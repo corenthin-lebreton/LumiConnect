@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, type FieldErrors, type UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { ArrowRight, PlugZap } from "lucide-react";
+import { PlugZap } from "lucide-react";
 import {
   infraGroupPatchSchema,
   infraGroupSchema,
@@ -15,11 +15,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldError, FieldHint, FieldLabel, Section } from "@/components/forms/field";
+import { cn } from "@/lib/utils";
 import type { InfraGroupSummary, InfraHealth, ServiceProbe } from "@/types";
 
 type Props =
   | { mode: "create" }
-  | { mode: "edit"; group: InfraGroupSummary };
+  | { mode: "edit"; group: InfraGroupSummary; onDelete: () => void };
 
 type Values = InfraGroupFormData | InfraGroupPatchData;
 type Form = UseFormReturn<Values>;
@@ -27,16 +28,20 @@ type Form = UseFormReturn<Values>;
 interface SectionProps {
   form: Form;
   errors: FieldErrors<Values>;
-  secretPlaceholder: string | undefined;
+  editing: boolean;
+  tester: TesterProps;
 }
 
-const UNCHANGED = "•••••••• (inchangé)";
+interface TesterProps {
+  testing: boolean;
+  health: InfraHealth | null;
+  onTest: () => void;
+}
 
 const CA_TEXTAREA_CLASS =
-  "mt-1.5 w-full rounded-md border border-line-strong bg-card px-3 py-2 font-mono text-xs " +
+  "mt-1.5 w-full rounded-md border border-input bg-card px-3 py-2 font-mono text-xs " +
   "outline-none transition-[border-color,box-shadow] duration-150 placeholder:font-sans " +
-  "placeholder:text-muted-foreground/80 hover:border-foreground/30 focus-visible:border-ring " +
-  "focus-visible:ring-2 focus-visible:ring-ring/25";
+  "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/28";
 
 async function readError(res: Response, fallback: string) {
   const body = await res.json().catch(() => null);
@@ -48,24 +53,39 @@ async function readError(res: Response, fallback: string) {
   return fallback;
 }
 
-function ProbeLine({ label, probe }: { label: string; probe: ServiceProbe }) {
+// Bouton de test dans la colonne de gauche de chaque service, et son résultat pour ce service.
+function ServiceTester({ tester, service }: { tester: TesterProps; service: keyof InfraHealth }) {
+  const probe: ServiceProbe | undefined = tester.health?.[service];
   return (
-    <li className="flex items-start justify-between gap-3 px-4 py-2.5 text-sm">
-      <span className="font-medium">{label}</span>
-      <span
-        className={`flex min-w-0 items-start gap-2 text-right font-mono text-micro ${
-          probe.ok ? "text-success" : "text-destructive"
-        }`}
+    <div className="flex flex-col gap-2 pt-1.5">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-8 self-start"
+        onClick={tester.onTest}
+        disabled={tester.testing}
       >
+        <PlugZap className={cn("size-4", tester.testing && "motion-safe:animate-pulse")} aria-hidden />
+        {tester.testing ? "Test en cours…" : "Tester la connexion"}
+      </Button>
+      {probe && (
         <span
-          className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${
-            probe.ok ? "bg-success" : "bg-destructive"
-          }`}
-          aria-hidden
-        />
-        <span className="break-all">{probe.ok ? "OK" : (probe.error ?? "Erreur")}</span>
-      </span>
-    </li>
+          className={cn(
+            "flex items-start gap-1.5 font-mono text-micro font-medium tracking-[0.06em] uppercase",
+            probe.ok ? "text-success" : "text-destructive"
+          )}
+        >
+          <span
+            className={cn("mt-px size-[7px] shrink-0", probe.ok ? "rounded-full bg-success" : "rounded-[2px] bg-destructive")}
+            aria-hidden
+          />
+          <span className="break-all normal-case tracking-normal">
+            {probe.ok ? "CONNECTÉ" : (probe.error ?? "Erreur")}
+          </span>
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -80,30 +100,81 @@ function TextField({
   label,
   error,
   placeholder,
-  secret = false,
+  mono = true,
   hint,
+  className,
 }: {
   form: Form;
   field: TextFieldName;
   label: string;
   error: string | undefined;
   placeholder?: string;
-  secret?: boolean;
+  mono?: boolean;
   hint?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div>
+    <div className={cn("flex flex-col gap-1.5", className)}>
       <FieldLabel htmlFor={field}>{label}</FieldLabel>
       <Input
         id={field}
-        type={secret ? "password" : undefined}
-        autoComplete={secret ? "new-password" : undefined}
         {...form.register(field)}
-        className="mt-1.5"
+        className={mono ? "font-mono text-[0.84375rem]" : undefined}
         placeholder={placeholder}
       />
       {hint && <FieldHint>{hint}</FieldHint>}
-      <FieldError message={error} />
+      <FieldError message={error} className="" />
+    </div>
+  );
+}
+
+// Secret jamais réaffiché : en édition, « inchangé » tant qu'on ne clique pas sur Remplacer.
+function SecretField({
+  form,
+  field,
+  label,
+  error,
+  editing,
+  hint,
+  className,
+}: {
+  form: Form;
+  field: TextFieldName;
+  label: string;
+  error: string | undefined;
+  editing: boolean;
+  hint?: React.ReactNode;
+  className?: string;
+}) {
+  const [replacing, setReplacing] = useState(!editing);
+
+  return (
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      <FieldLabel htmlFor={field}>{label}</FieldLabel>
+      {replacing ? (
+        <Input
+          id={field}
+          type="password"
+          autoComplete="new-password"
+          autoFocus={editing}
+          {...form.register(field)}
+          className="font-mono text-[0.84375rem]"
+        />
+      ) : (
+        <div
+          className={
+            "flex h-9 items-center justify-between rounded-md border border-dashed border-input bg-muted " +
+            "pr-1 pl-3 font-mono text-[0.8125rem] text-muted-foreground"
+          }
+        >
+          •••••••• inchangé
+          <Button type="button" variant="ghost" size="sm" className="h-7 text-foreground" onClick={() => setReplacing(true)}>
+            Remplacer
+          </Button>
+        </div>
+      )}
+      {hint && <FieldHint>{hint}</FieldHint>}
+      <FieldError message={error} className="" />
     </div>
   );
 }
@@ -120,7 +191,7 @@ function CaTextarea({
   hint: React.ReactNode;
 }) {
   return (
-    <div className="md:col-span-2">
+    <div className="flex flex-col md:col-span-2">
       <FieldLabel htmlFor={field}>Certificat CA (optionnel)</FieldLabel>
       <textarea
         id={field}
@@ -150,23 +221,28 @@ function InsecureTlsCheckbox({
       <input type="checkbox" {...form.register(field)} className="mt-0.5 h-4 w-4 accent-primary" />
       <span className="text-sm">
         Accepter un certificat auto-signé sans CA
-        <span className="block text-xs leading-relaxed text-muted-foreground">{children}</span>
+        <span className="mt-0.5 block text-[0.78125rem] leading-relaxed text-muted-foreground">{children}</span>
       </span>
     </label>
   );
 }
 
-function ProxmoxSection({ form, errors, secretPlaceholder }: SectionProps) {
+function ProxmoxSection({ form, errors, editing, tester }: SectionProps) {
   return (
-    <Section title="Proxmox" description="Jeton d'API dédié, jamais root@pam.">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <Section
+      title="Proxmox VE"
+      description="Clonage, configuration et suppression des VMs via l’API et le guest agent. Jeton d’API dédié, jamais root@pam."
+      aside={<ServiceTester tester={tester} service="proxmox" />}
+    >
+      <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] md:grid-cols-2">
         <TextField
           form={form}
           field="proxmox_url"
-          label="URL"
+          label="URL de l’API"
           error={errors.proxmox_url?.message}
           placeholder="https://pve.example.com:8006"
           hint="Base uniquement, sans chemin."
+          className="md:col-span-2"
         />
         <TextField
           form={form}
@@ -182,13 +258,14 @@ function ProxmoxSection({ form, errors, secretPlaceholder }: SectionProps) {
           error={errors.proxmox_token_id?.message}
           placeholder="lumiconnect@pve!deploy"
         />
-        <TextField
+        <SecretField
           form={form}
           field="proxmox_token_secret"
           label="Secret du token"
           error={errors.proxmox_token_secret?.message}
-          placeholder={secretPlaceholder}
-          secret
+          editing={editing}
+          hint="Stocké chiffré. Laissez inchangé pour conserver la valeur actuelle."
+          className="md:col-span-2"
         />
         <CaTextarea
           form={form}
@@ -205,10 +282,14 @@ function ProxmoxSection({ form, errors, secretPlaceholder }: SectionProps) {
   );
 }
 
-function PfSenseSection({ form, errors, secretPlaceholder }: SectionProps) {
+function PfSenseSection({ form, errors, editing, tester }: SectionProps) {
   return (
-    <Section title="pfSense" description="API v2 activée, clé API de lecture.">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <Section
+      title="pfSense"
+      description="Lecture des baux DHCP pour retrouver l’IP de chaque VM. API v2 activée, clé de lecture."
+      aside={<ServiceTester tester={tester} service="pfsense" />}
+    >
+      <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] md:grid-cols-2">
         <TextField
           form={form}
           field="pfsense_url"
@@ -216,13 +297,12 @@ function PfSenseSection({ form, errors, secretPlaceholder }: SectionProps) {
           error={errors.pfsense_url?.message}
           placeholder="https://192.168.1.1"
         />
-        <TextField
+        <SecretField
           form={form}
           field="pfsense_api_key"
           label="Clé API"
           error={errors.pfsense_api_key?.message}
-          placeholder={secretPlaceholder}
-          secret
+          editing={editing}
         />
         <CaTextarea
           form={form}
@@ -239,19 +319,35 @@ function PfSenseSection({ form, errors, secretPlaceholder }: SectionProps) {
   );
 }
 
-function GuacamoleSection({ form, errors, secretPlaceholder }: SectionProps) {
+function GuacamoleSection({ form, errors, editing, tester }: SectionProps) {
   return (
     <Section
       title="Guacamole"
-      description="Compte administrateur qui crée connexions et utilisateurs."
+      description="Création des connexions RDP / SSH distribuées aux stagiaires, via un compte administrateur."
+      aside={<ServiceTester tester={tester} service="guacamole" />}
     >
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-5 gap-y-[18px] md:grid-cols-2">
         <TextField
           form={form}
           field="guacamole_url"
           label="URL"
           error={errors.guacamole_url?.message}
           placeholder="http://guac.example.com:8080/guacamole"
+          className="md:col-span-2"
+        />
+        <TextField
+          form={form}
+          field="guacamole_admin_user"
+          label="Utilisateur admin"
+          error={errors.guacamole_admin_user?.message}
+          placeholder="guacadmin"
+        />
+        <SecretField
+          form={form}
+          field="guacamole_admin_password"
+          label="Mot de passe"
+          error={errors.guacamole_admin_password?.message}
+          editing={editing}
         />
         <TextField
           form={form}
@@ -261,61 +357,6 @@ function GuacamoleSection({ form, errors, secretPlaceholder }: SectionProps) {
           placeholder="postgresql"
           hint="Identifiant JDBC : « postgresql », jamais « postgres »."
         />
-        <TextField
-          form={form}
-          field="guacamole_admin_user"
-          label="Utilisateur admin"
-          error={errors.guacamole_admin_user?.message}
-          placeholder="guacadmin"
-        />
-        <TextField
-          form={form}
-          field="guacamole_admin_password"
-          label="Mot de passe admin"
-          error={errors.guacamole_admin_password?.message}
-          placeholder={secretPlaceholder}
-          secret
-        />
-      </div>
-    </Section>
-  );
-}
-
-function ConnectionTestSection({
-  testing,
-  health,
-  onTest,
-}: {
-  testing: boolean;
-  health: InfraHealth | null;
-  onTest: () => void;
-}) {
-  return (
-    <Section
-      title="Connexion"
-      description="Vérifie les trois services avec les valeurs ci-dessus, sans enregistrer."
-    >
-      <div className="space-y-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onTest}
-          disabled={testing}
-          className="gap-1.5"
-        >
-          <PlugZap
-            className={`h-4 w-4 ${testing ? "motion-safe:animate-pulse" : ""}`}
-            aria-hidden
-          />
-          {testing ? "Test en cours…" : "Tester la connexion"}
-        </Button>
-        {health && (
-          <ul className="panel divide-y divide-line overflow-hidden bg-card">
-            <ProbeLine label="Proxmox" probe={health.proxmox} />
-            <ProbeLine label="pfSense" probe={health.pfsense} />
-            <ProbeLine label="Guacamole" probe={health.guacamole} />
-          </ul>
-        )}
       </div>
     </Section>
   );
@@ -325,26 +366,38 @@ function SubmitBar({
   saving,
   editing,
   onCancel,
+  onDelete,
 }: {
   saving: boolean;
   editing: boolean;
   onCancel: () => void;
+  onDelete?: () => void;
 }) {
   return (
-    <div className="grid gap-x-8 border-t border-line py-7 md:grid-cols-[14rem_1fr]">
-      <p className="eyebrow hidden md:block">Validation</p>
-      <div className="flex flex-wrap items-center gap-4">
-        <Button type="submit" size="lg" className="gap-1.5" disabled={saving}>
-          {saving ? "Enregistrement…" : editing ? "Enregistrer" : "Créer le groupe"}
-          {!saving && <ArrowRight className="h-4 w-4" aria-hidden />}
-        </Button>
-        <Button type="button" variant="ghost" size="lg" onClick={onCancel}>
-          Annuler
-        </Button>
-        <p className="text-xs text-muted-foreground">
+    <div
+      className={
+        "-mx-4 mt-8 flex flex-wrap items-center justify-between gap-3 border-t " +
+        "border-line-strong bg-surface px-4 py-3.5 md:-mx-10 md:px-10"
+      }
+    >
+      <div className="flex items-center gap-3">
+        {onDelete && (
+          <Button type="button" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={onDelete}>
+            Supprimer le groupe
+          </Button>
+        )}
+        <p className="hidden text-xs text-muted-foreground lg:block">
           Les secrets sont chiffrés en base et ne sont jamais réaffichés.
           {editing && " Changer l'URL d'un service demande de ressaisir son secret."}
         </p>
+      </div>
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Annuler
+        </Button>
+        <Button type="submit" disabled={saving}>
+          {saving ? "Enregistrement…" : editing ? "Enregistrer" : "Créer le groupe"}
+        </Button>
       </div>
     </div>
   );
@@ -454,29 +507,27 @@ export function InfraGroupForm(props: Props) {
   const sectionProps: SectionProps = {
     form,
     errors: form.formState.errors,
-    secretPlaceholder: editing ? UNCHANGED : undefined,
+    editing,
+    tester: { testing, health, onTest: () => void test() },
   };
 
   return (
-    <form onSubmit={form.handleSubmit(save)}>
-      <Section title="Groupe" description="Nom affiché lors du choix d'une infrastructure.">
-        <div>
-          <FieldLabel htmlFor="name">Nom du groupe</FieldLabel>
-          <Input
-            id="name"
-            {...form.register("name")}
-            className="mt-1.5 font-sans"
-            placeholder="ex: Salle Lyon"
-          />
-          <FieldError message={sectionProps.errors.name?.message} />
-        </div>
-      </Section>
+    <form onSubmit={form.handleSubmit(save)} className="flex max-w-[1040px] flex-col gap-6">
+      <div className="flex max-w-[420px] flex-col gap-1.5">
+        <FieldLabel htmlFor="name">Nom du groupe</FieldLabel>
+        <Input id="name" {...form.register("name")} placeholder="ex : Salle A, Lyon" />
+        <FieldError message={sectionProps.errors.name?.message} className="" />
+      </div>
 
       <ProxmoxSection {...sectionProps} />
       <PfSenseSection {...sectionProps} />
       <GuacamoleSection {...sectionProps} />
-      <ConnectionTestSection testing={testing} health={health} onTest={() => void test()} />
-      <SubmitBar saving={saving} editing={editing} onCancel={cancel} />
+      <SubmitBar
+        saving={saving}
+        editing={editing}
+        onCancel={cancel}
+        onDelete={props.mode === "edit" ? props.onDelete : undefined}
+      />
     </form>
   );
 }
