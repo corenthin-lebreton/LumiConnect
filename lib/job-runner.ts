@@ -5,6 +5,7 @@ import { claimJob, failStaleJobs, heartbeat, markFailed, markSucceeded } from "@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveInfraForFormation } from "@/lib/infra/groups";
 import type { Formation, Job } from "@/types";
+import { createLogger } from "@/lib/log";
 
 const RUNNER_ID = `${hostname()}-${process.pid}`;
 const POLL_INTERVAL_MS = Number(process.env.LC_WORKER_POLL_MS ?? 3000);
@@ -20,8 +21,10 @@ const REQUIRED_ENV = [
 let shuttingDown = false;
 let started = false;
 
+const logger = createLogger(`jobs ${RUNNER_ID}`);
+
 function log(message: string, ...rest: unknown[]) {
-  console.log(`[jobs ${RUNNER_ID}] ${message}`, ...rest);
+  logger.info(message, ...rest);
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -75,7 +78,7 @@ async function runJob(job: Job): Promise<void> {
     await markSucceeded(job.id);
   } catch (err) {
     const message = String((err as Error)?.stack ?? err);
-    console.error(`[jobs ${RUNNER_ID}] travail ${job.id} en échec :`, message);
+    logger.error(`travail ${job.id} en échec :`, message);
     await markFormationFailed(job, String((err as Error)?.message ?? err));
     await markFailed(job.id, message);
   } finally {
@@ -101,7 +104,7 @@ async function loop(): Promise<void> {
       const didWork = await tick();
       if (!didWork) await sleep(POLL_INTERVAL_MS);
     } catch (err) {
-      console.error(`[jobs ${RUNNER_ID}] erreur de boucle :`, err);
+      logger.error("erreur de boucle :", err);
       await sleep(POLL_INTERVAL_MS);
     }
   }
@@ -114,8 +117,8 @@ export function startJobLoop(): void {
 
   const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
   if (missing.length > 0) {
-    console.error(
-      `[jobs] variables d'environnement manquantes, boucle non démarrée : ${missing.join(", ")}`
+    logger.error(
+      `variables d'environnement manquantes, boucle non démarrée : ${missing.join(", ")}`
     );
     return;
   }

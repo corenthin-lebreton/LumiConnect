@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AlertTriangle } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { InfraGroupSummary } from "@/types";
@@ -35,39 +35,42 @@ export function InfraGroupDelete({ group }: { group: InfraGroupSummary }) {
   }
 
   return (
-    <div className="panel overflow-hidden border-destructive/35 bg-card">
-      <div className="flex items-start gap-3 border-b border-destructive/25 bg-destructive/8 px-5 py-4">
-        <AlertTriangle className="mt-0.5 h-4.5 w-4.5 shrink-0 text-destructive" aria-hidden />
-        <div>
-          <p className="text-sm font-semibold text-destructive">Supprimer ce groupe</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+    <div className="panel overflow-hidden bg-card">
+      <div className="h-[3px] bg-destructive" aria-hidden />
+      <div className="flex flex-col gap-3.5 p-5">
+        <div className="flex flex-col gap-1">
+          <p className="font-mono text-micro font-medium tracking-[0.12em] text-destructive uppercase">
+            Supprimer ce groupe
+          </p>
+          <p className="text-sm leading-normal text-pretty">
             {blocked
               ? `${group.formations_count} formation${plural} y ${plural ? "sont" : "est"} ` +
                 `rattachée${plural}. Les supprimer d'abord.`
               : "Aucune ressource n'est touchée sur Proxmox, pfSense ou Guacamole : seule la configuration disparaît."}
           </p>
         </div>
-      </div>
 
-      {!blocked && (
-        <div className="space-y-4 px-5 py-4">
-          <div>
-            <label htmlFor="confirm-group-name" className="eyebrow">
-              Tapez le nom pour confirmer
-            </label>
-            <p className="mb-2 mt-1.5 inline-block rounded-sm border border-line bg-muted px-2 py-1 font-mono text-sm">
-              {group.name}
-            </p>
+        {!blocked && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-[0.8125rem] leading-snug font-medium">
+              Saisissez{" "}
+              <span className="rounded-[3px] bg-muted px-[5px] py-px font-mono">{group.name}</span>{" "}
+              pour confirmer
+            </span>
             <Input
-              id="confirm-group-name"
               value={confirmName}
               onChange={(e) => setConfirmName(e.target.value)}
-              placeholder={group.name}
-              className="font-mono"
+              placeholder="Nom du groupe"
               autoComplete="off"
+              className="h-[38px] focus-visible:border-destructive focus-visible:ring-destructive/25"
             />
-          </div>
-          <Button variant="destructive" disabled={!isMatch || loading} onClick={() => void handleDelete()}>
+          </label>
+        )}
+      </div>
+      {!blocked && (
+        <div className="flex justify-end border-t border-line bg-surface px-5 py-3.5">
+          <Button variant="destructive" className="h-9" disabled={!isMatch || loading} onClick={() => void handleDelete()}>
+            <Trash2 className="size-4" aria-hidden />
             {loading ? "Suppression…" : "Supprimer définitivement"}
           </Button>
         </div>

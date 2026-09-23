@@ -31,9 +31,9 @@ function Notice({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex gap-3 rounded-lg border border-dashed border-line-strong px-4 py-4">
+    <div className="flex gap-3 rounded-lg border border-dashed border-line-strong px-4 py-3.5">
       <span className="mt-0.5 shrink-0 text-muted-foreground">{icon}</span>
-      <p className="text-sm text-muted-foreground leading-relaxed">{children}</p>
+      <p className="text-[0.8125rem] leading-relaxed text-muted-foreground">{children}</p>
     </div>
   );
 }
@@ -42,13 +42,27 @@ function Tag({ children, tone = "muted" }: { children: React.ReactNode; tone?: "
   return (
     <span
       className={cn(
-        "whitespace-nowrap rounded-sm border px-1.5 py-0.5 font-mono text-micro uppercase tracking-[0.06em]",
-        tone === "warning"
-          ? "border-warning/40 bg-warning/12 text-warning"
-          : "border-line bg-muted text-muted-foreground"
+        "rounded-[3px] border px-[5px] py-[3px] font-mono text-[0.59375rem] leading-none font-medium",
+        "tracking-[0.08em] whitespace-nowrap uppercase",
+        tone === "warning" ? "border-warning/45 text-warning" : "border-line-strong text-muted-foreground"
       )}
     >
       {children}
+    </span>
+  );
+}
+
+function Checkbox({ checked, locked = false }: { checked: boolean; locked?: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "mt-px grid size-4 shrink-0 place-items-center rounded-sm transition-colors duration-150",
+        checked ? "bg-primary text-primary-foreground" : "border-[1.5px] border-input bg-card",
+        locked && "opacity-60"
+      )}
+    >
+      {checked && (locked ? <Lock className="size-2.5 [stroke-width:2.5]" /> : <Check className="size-3 [stroke-width:3]" />)}
     </span>
   );
 }
@@ -116,7 +130,7 @@ export function ScriptPicker({ osId, templateChosen, value, onChange }: Props) {
     return (
       <div className="space-y-2" aria-busy="true">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="h-[4.25rem] rounded-lg border border-line bg-muted motion-safe:animate-pulse" />
+          <div key={i} className="h-10 rounded-md bg-muted motion-safe:animate-shimmer-soft" />
         ))}
       </div>
     );
@@ -160,104 +174,60 @@ function ScriptManifest({
   const reboots = applied.filter((entry) => entry.reboot_after).length;
 
   return (
-    <div className="space-y-4">
-      <div className="panel divide-y divide-line overflow-hidden bg-card">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between pb-1.5">
+        <span className="eyebrow">{registry.os_id}</span>
+        <span className="text-xs text-muted-foreground">
+          {applied.length} sélectionné{applied.length > 1 ? "s" : ""}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-x-5 gap-y-0.5 md:grid-cols-2">
         {mandatory.map((entry) => (
-          <div key={entry.id} className="flex gap-3 bg-card px-4 py-3.5">
-            <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline gap-2 flex-wrap">
-                <span className="text-sm font-medium">{entry.label}</span>
-                <Tag>toujours appliqué</Tag>
-                {entry.per_vm && <Tag>par VM</Tag>}
-                {entry.reboot_after && <Tag tone="warning">redémarrage</Tag>}
-              </div>
-              {entry.description && (
-                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                  {entry.description}
-                </p>
-              )}
-            </div>
+          <div key={entry.id} className="flex items-start gap-2.5 rounded-md p-2" title="Toujours appliqué">
+            <Checkbox checked locked />
+            <ScriptText entry={entry} registry={registry} mandatory />
           </div>
         ))}
 
-        {optional.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-            Aucun outil optionnel pour {registry.os_id} pour l&apos;instant. Ajouter un fichier
-            dans <code className="font-mono text-xs">scripts/{registry.os_id}/</code> et une entrée
-            dans son <code className="font-mono text-xs">registry.json</code>.
-          </p>
-        ) : (
-          optional.map((entry) => {
-            const isSelected = selected.has(entry.id);
-            const missing = entry.requires.filter((id) => !selected.has(id));
+        {optional.map((entry) => {
+          const isSelected = selected.has(entry.id);
+          const missing = entry.requires.filter((id) => !selected.has(id));
 
-            return (
-              <label
-                key={entry.id}
-                className={cn(
-                  "flex cursor-pointer gap-3 px-4 py-3.5 transition-colors duration-150",
-                  "hover:bg-muted has-[:focus-visible]:bg-muted",
-                  "has-[:focus-visible]:outline has-[:focus-visible]:outline-2",
-                  "has-[:focus-visible]:outline-ring has-[:focus-visible]:-outline-offset-2",
-                  isSelected ? "bg-accent" : "bg-card"
-                )}
-              >
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={isSelected}
-                  onChange={() => toggle(entry)}
-                />
-                <span
-                  aria-hidden
-                  className={cn(
-                    "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border",
-                    "transition-colors duration-150",
-                    isSelected
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-line-strong bg-card"
-                  )}
-                >
-                  {isSelected && <Check className="h-3 w-3 [stroke-width:2.5]" />}
-                </span>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="text-sm font-medium">{entry.label}</span>
-                    {entry.per_vm && <Tag>par VM</Tag>}
-                    {entry.reboot_after && <Tag tone="warning">redémarrage</Tag>}
-                    {entry.requires.length > 0 && (
-                      <Tag>
-                        requiert{" "}
-                        {entry.requires
-                          .map((id) => registry.scripts.find((s) => s.id === id)?.label ?? id)
-                          .join(", ")}
-                      </Tag>
-                    )}
-                  </div>
-                  {entry.description && (
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      {entry.description}
-                    </p>
-                  )}
-                  {isSelected && missing.length > 0 && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Ajouté avec ses dépendances.
-                    </p>
-                  )}
-                </div>
-              </label>
-            );
-          })
-        )}
+          return (
+            <label
+              key={entry.id}
+              className={cn(
+                "flex cursor-pointer items-start gap-2.5 rounded-md p-2 transition-colors duration-150",
+                "hover:bg-muted has-[:focus-visible]:bg-muted has-[:focus-visible]:outline-2",
+                "has-[:focus-visible]:outline-ring has-[:focus-visible]:-outline-offset-2"
+              )}
+            >
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={isSelected}
+                onChange={() => toggle(entry)}
+              />
+              <Checkbox checked={isSelected} />
+              <ScriptText entry={entry} registry={registry} addedWithDeps={isSelected && missing.length > 0} />
+            </label>
+          );
+        })}
       </div>
 
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
+      {optional.length === 0 && (
+        <p className="text-[0.8125rem] text-muted-foreground">
+          Aucun outil optionnel pour {registry.os_id} pour l&apos;instant. Ajouter un fichier dans{" "}
+          <code className="font-mono text-xs">scripts/{registry.os_id}/</code> et une entrée dans son{" "}
+          <code className="font-mono text-xs">registry.json</code>.
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-baseline justify-between gap-3 border-t border-line pt-3">
         <p className="text-xs text-muted-foreground">
-          <span className="font-mono tabular">{applied.length}</span> script
-          {applied.length > 1 ? "s" : ""}, exécutés dans cet ordre sur l&apos;image dorée puis
-          clonés ; ceux marqués « par VM » rejoués sur chaque machine
+          Exécutés sur l&apos;image dorée puis clonés ; ceux marqués « par VM » sont rejoués sur
+          chaque machine
           {reboots > 0 && (
             <>
               , dont <span className="font-mono tabular">{reboots}</span> avec redémarrage
@@ -266,10 +236,48 @@ function ScriptManifest({
           .
         </p>
         <p className="text-xs text-muted-foreground">
-          Délai maximum <span className="font-mono tabular">{formatCeiling(ceiling)}</span> pour
-          l&apos;image dorée
+          Délai maximum <span className="font-mono tabular">{formatCeiling(ceiling)}</span>
         </p>
       </div>
     </div>
+  );
+}
+
+function ScriptText({
+  entry,
+  registry,
+  mandatory = false,
+  addedWithDeps = false,
+}: {
+  entry: ScriptEntry;
+  registry: ScriptRegistry;
+  mandatory?: boolean;
+  addedWithDeps?: boolean;
+}) {
+  return (
+    <span className="flex min-w-0 flex-1 flex-col gap-1">
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.84375rem] leading-tight font-medium">
+        {entry.label}
+        {mandatory && <Tag>toujours</Tag>}
+        {entry.per_vm && <Tag>par VM</Tag>}
+        {entry.reboot_after && <Tag tone="warning">redémarrage</Tag>}
+        {entry.requires.length > 0 && (
+          <Tag>
+            requiert{" "}
+            {entry.requires
+              .map((id) => registry.scripts.find((s) => s.id === id)?.label ?? id)
+              .join(", ")}
+          </Tag>
+        )}
+      </span>
+      {entry.description && (
+        <span className="font-mono text-[0.71875rem] leading-snug text-muted-foreground">
+          {entry.description}
+        </span>
+      )}
+      {addedWithDeps && (
+        <span className="text-[0.71875rem] text-muted-foreground">Ajouté avec ses dépendances.</span>
+      )}
+    </span>
   );
 }

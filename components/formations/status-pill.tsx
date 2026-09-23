@@ -1,28 +1,34 @@
-import { cn } from "@/lib/utils";
-import type { FormationStatus } from "@/types";
+import { Pill, type Tone } from "@/components/ui/pill";
+import type { FormationStatus, VmStatus } from "@/types";
 
-const styles: Record<FormationStatus, { dot: string; text: string; label: string }> = {
-  draft: { dot: "bg-muted", text: "text-muted-foreground", label: "Brouillon" },
-  deploying: { dot: "bg-running motion-safe:animate-pulse", text: "text-running", label: "Déploiement" },
-  deployed: { dot: "bg-success", text: "text-success", label: "Déployée" },
-  failed: { dot: "bg-destructive", text: "text-destructive", label: "Échec" },
-  deleting: { dot: "bg-running motion-safe:animate-pulse", text: "text-running", label: "Suppression" },
-  cleanup_failed: { dot: "bg-warning", text: "text-warning", label: "Nettoyage échoué" },
+export const formationStatus: Record<FormationStatus, { tone: Tone; label: string }> = {
+  draft: { tone: "muted", label: "Brouillon" },
+  deploying: { tone: "running", label: "Déploiement" },
+  deployed: { tone: "success", label: "Déployée" },
+  failed: { tone: "destructive", label: "Échec" },
+  deleting: { tone: "running", label: "Suppression" },
+  cleanup_failed: { tone: "warning", label: "Nettoyage échoué" },
 };
 
-export function StatusPill({ status }: { status: FormationStatus }) {
-  const s = styles[status] ?? styles.draft;
+export const vmStatus: Record<VmStatus, { tone: Tone; label: string }> = {
+  pending: { tone: "muted", label: "En attente" },
+  cloning: { tone: "running", label: "Clone" },
+  configuring: { tone: "running", label: "Configuration" },
+  ready: { tone: "success", label: "Prête" },
+  failed: { tone: "destructive", label: "Échec" },
+};
+
+export function StatusPill({ status, detail }: { status: FormationStatus; detail?: string }) {
+  const s = formationStatus[status] ?? formationStatus.draft;
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-sm border border-current/25 px-1.5 py-0.5",
-        s.text
-      )}
-    >
-      <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", s.dot)} aria-hidden />
-      <span className="whitespace-nowrap font-mono text-micro font-medium uppercase tracking-[0.06em]">
-        {s.label}
-      </span>
-    </span>
+    <Pill tone={s.tone}>
+      {s.label}
+      {detail && ` ${detail}`}
+    </Pill>
   );
+}
+
+export function VmStatusPill({ status }: { status: VmStatus }) {
+  const s = vmStatus[status] ?? vmStatus.pending;
+  return <Pill tone={s.tone}>{s.label}</Pill>;
 }

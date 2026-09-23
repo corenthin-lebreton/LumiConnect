@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, UserPlus } from "lucide-react";
-import { ConsoleHead, Slab, TableHead } from "@/components/layout/console-head";
+import { ConsoleHead, EmptyState, TableHead } from "@/components/layout/console-head";
+import { Pill } from "@/components/ui/pill";
+import { cn } from "@/lib/utils";
 
 async function readError(res: Response, fallback: string) {
   const body = await res.json().catch(() => null);
@@ -85,107 +87,114 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <ConsoleHead
-        eyebrow="Administration"
+        eyebrow="Lumixen"
         title="Utilisateurs"
-        readouts={[
-          {
-            label: "Comptes",
-            value: String(users.length),
-            sub: "accès complet à la console",
-          },
-        ]}
+        subtitle={`${users.length} compte${users.length > 1 ? "s" : ""} actif${users.length > 1 ? "s" : ""} · accès complet à la console`}
       />
 
-      <section className="grid gap-x-8 gap-y-4 border-t border-line pt-7 md:grid-cols-[14rem_1fr]">
-        <div>
-          <h2 className="display text-base">Ajouter un compte</h2>
-          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-            Le mot de passe temporaire est communiqué hors de la console.
-          </p>
+      <form
+        onSubmit={handleAdd}
+        className="panel grid grid-cols-1 items-end gap-3 bg-card px-[18px] py-4 md:grid-cols-[minmax(0,1fr)_240px_auto]"
+      >
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="email">Adresse e-mail</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            placeholder="prenom.nom@lumixen.fr"
+          />
         </div>
-        <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end">
-          <div>
-            <Label htmlFor="email" className="eyebrow">
-              Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="mt-1.5"
-              placeholder="admin@lumixen.fr"
-            />
-          </div>
-          <div>
-            <Label htmlFor="password" className="eyebrow">
-              Mot de passe temporaire
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="mt-1.5"
-            />
-          </div>
-          <Button type="submit" disabled={loading} size="lg" className="gap-1.5">
-            <UserPlus className="h-4 w-4" aria-hidden />
-            {loading ? "Ajout…" : "Ajouter"}
-          </Button>
-        </form>
-      </section>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="password">Mot de passe temporaire</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="new-password"
+          />
+        </div>
+        <Button type="submit" disabled={loading} className="h-9">
+          <UserPlus className="size-4" aria-hidden />
+          {loading ? "Création…" : "Créer le compte"}
+        </Button>
+        <p className="text-xs text-muted-foreground md:col-span-3">
+          Le mot de passe temporaire est communiqué hors de la console.
+        </p>
+      </form>
 
-      <Slab title={`Comptes existants (${users.length})`}>
-        <div>
-          {users.length === 0 ? (
-            <p className="px-4 py-12 text-center text-sm text-muted-foreground">
-              Aucun compte pour l&apos;instant. Le formulaire ci-dessus en crée un.
-            </p>
-          ) : (
-            <div className="divide-y divide-line">
-              <TableHead className="hidden grid-cols-12 md:grid">
-                <div className="col-span-7 eyebrow">Adresse e-mail</div>
-                <div className="col-span-3 eyebrow">Créé le</div>
-                <div className="col-span-2 eyebrow text-right">Action</div>
-              </TableHead>
+      <div className="panel overflow-hidden bg-card">
+        {users.length === 0 ? (
+          <EmptyState count="0 compte" title="Aucun compte pour l’instant">
+            Le formulaire ci-dessus crée un compte avec un mot de passe temporaire.
+          </EmptyState>
+        ) : (
+          <>
+            <TableHead className={GRID}>
+              <span>Compte</span>
+              <span>Créé le</span>
+              <span>Statut</span>
+              <span className="text-right">Actions</span>
+            </TableHead>
+            <ul>
               {users.map((u) => (
-                <div
+                <li
                   key={u.id}
-                  className={
-                    "grid grid-cols-12 items-center gap-4 px-4 py-2.5 " +
-                    "transition-colors duration-150 hover:bg-muted"
-                  }
+                  className={cn(
+                    "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 border-b border-line px-[18px] py-3",
+                    "transition-colors duration-150 last:border-b-0 hover:bg-muted md:h-14 md:py-0",
+                    GRID
+                  )}
                 >
-                  <div className="col-span-7 truncate text-sm font-medium">{u.email}</div>
-                  <div className="col-span-3 font-mono text-meta text-muted-foreground tabular">
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span
+                      className="grid size-8 shrink-0 place-items-center rounded-full bg-muted font-mono text-[0.71875rem] font-medium text-muted-foreground uppercase"
+                      aria-hidden
+                    >
+                      {initials(u.email)}
+                    </span>
+                    <span className="truncate font-mono text-[0.8125rem]">{u.email}</span>
+                  </span>
+                  <span className="hidden text-[0.8125rem] text-muted-foreground md:block">
                     {new Date(u.created_at).toLocaleDateString("fr-FR", {
                       day: "2-digit",
                       month: "short",
                       year: "numeric",
                     })}
-                  </div>
-                  <div className="col-span-2 flex justify-end">
+                  </span>
+                  <span className="hidden md:block">
+                    <Pill tone="success">Actif</Pill>
+                  </span>
+                  <span className="flex justify-end">
                     <Button
-                      variant="ghost"
+                      variant="destructive-ghost"
                       size="icon-sm"
                       onClick={() => handleDelete(u.id)}
-                      aria-label="Supprimer"
-                      className="hover:text-destructive"
+                      aria-label={`Retirer l’accès de ${u.email}`}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="size-4" aria-hidden />
                     </Button>
-                  </div>
-                </div>
+                  </span>
+                </li>
               ))}
-            </div>
-          )}
-        </div>
-      </Slab>
+            </ul>
+          </>
+        )}
+      </div>
     </div>
   );
+}
+
+const GRID = "md:grid-cols-[minmax(0,2.2fr)_1.2fr_1fr_96px]";
+
+function initials(email: string): string {
+  const [local] = email.split("@");
+  const parts = local.split(/[._-]+/).filter(Boolean);
+  return (parts.length > 1 ? parts[0][0] + parts[1][0] : local.slice(0, 2)) || "?";
 }

@@ -1,5 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createLogger } from "@/lib/log";
 import type { Job, JobKind } from "@/types";
+
+const log = createLogger("queue");
 
 const UNIQUE_VIOLATION = "23505";
 
@@ -42,7 +45,7 @@ export async function heartbeat(jobId: string): Promise<void> {
     .update({ heartbeat_at: new Date().toISOString() })
     .eq("id", jobId);
 
-  if (error) console.error(`[queue] heartbeat job=${jobId} échoué :`, error.message);
+  if (error) log.error(`heartbeat job=${jobId} échoué :`, error.message);
 }
 
 export async function markSucceeded(jobId: string): Promise<void> {

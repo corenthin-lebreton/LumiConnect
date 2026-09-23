@@ -2,6 +2,8 @@ import * as proxmox from "@/lib/services/proxmox";
 import * as guacamole from "@/lib/services/guacamole";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveInfraForFormation } from "@/lib/infra/groups";
+import { createLogger } from "@/lib/log";
+import { mapWithConcurrency } from "@/lib/pool";
 import type {
   Formation,
   FormationVm,
@@ -10,12 +12,18 @@ import type {
   ServiceResult,
 } from "@/types";
 
+const log = createLogger("cleanup");
+
+// Le fallback de suppression des connexions touche une entrée par VM : borné pour ne pas
+// saturer l'API Guacamole.
+const CONNECTION_DELETE_CONCURRENCY = 5;
+
 function logStep(step: string, target: string, result: ServiceResult, failures: string[]) {
   if (result.success) {
-    console.log(`[cleanup] ${step} OK target=${target}`);
+    log.debug(`${step} OK target=${target}`);
   } else {
     const msg = `${step} target=${target} err=${result.error}`;
-    console.error(`[cleanup] ${msg}`);
+    log.error(msg);
     failures.push(msg);
   }
 }
@@ -23,7 +31,7 @@ function logStep(step: string, target: string, result: ServiceResult, failures: 
 async function settleAll(step: string, tasks: Promise<unknown>[], failures: string[]) {
   for (const result of await Promise.allSettled(tasks)) {
     if (result.status === "rejected") {
-      console.error(`[cleanup] ${step} rejected:`, result.reason);
+      log.error(`${step} rejected:`, result.reason);
       failures.push(`${step} rejected: ${(result.reason as Error).message}`);
     }
   }
@@ -49,11 +57,11 @@ async function resolveGroupId(
   if (storedId) return storedId;
   const found = await lookup.fn(guac, name);
   if (found.success && found.data) {
-    console.log(`[cleanup] ${label} group fallback findByName=${found.data.identifier}`);
+    log.debug(`${label} group fallback findByName=${found.data.identifier}`);
     return found.data.identifier;
   }
   if (!found.success) {
-    console.error(`[cleanup] ${lookup.name} err:`, found.error);
+    log.error(`${lookup.name} err:`, found.error);
     failures.push(`${lookup.name}: ${found.error}`);
   }
   return null;
@@ -82,7 +90,7 @@ async function deleteGuacUserGroup(guac: GuacamoleConfig, f: Formation, failures
     failures
   );
   if (!userGroupId) {
-    console.log(`[cleanup] no user group to delete`);
+    log.debug("no user group to delete");
     return;
   }
   const r = await guacamole.deleteUserGroup(guac, userGroupId);
@@ -104,18 +112,19 @@ async function deleteGuacConnections(
     failures
   );
   if (!connGroupId) {
-    console.log(`[cleanup] no connection group to delete`);
+    log.debug("no connection group to delete");
     return;
   }
   const r = await guacamole.deleteConnectionGroup(guac, connGroupId);
   logStep("deleteConnectionGroup", connGroupId, r, failures);
   if (r.success) return;
-  for (const vm of vmList) {
-    if (vm.guac_connection_id) {
-      const cr = await guacamole.deleteConnection(guac, vm.guac_connection_id);
-      logStep("deleteConnection", vm.guac_connection_id, cr, failures);
-    }
-  }
+  const connectionIds = vmList
+    .map((vm) => vm.guac_connection_id)
+    .filter((id): id is string => Boolean(id));
+  await mapWithConcurrency(connectionIds, CONNECTION_DELETE_CONCURRENCY, async (id) => {
+    const cr = await guacamole.deleteConnection(guac, id);
+    logStep("deleteConnection", id, cr, failures);
+  });
 }
 
 async function deleteProxmoxVms(
@@ -181,7 +190,7 @@ function markCleanupFailed(supabase: AdminClient, formationId: string, message: 
 }
 
 export async function deleteFormation(formationId: string) {
-  console.log(`[cleanup] Starting formation=${formationId}`);
+  log.info(`Starting formation=${formationId}`);
   const supabase = createAdminClient();
   const failures: string[] = [];
 
@@ -189,7 +198,7 @@ export async function deleteFormation(formationId: string) {
   const infra = await resolveInfraForFormation(f);
   const guac = infra.guacamole;
   const vmList = await markDeletingAndLoadVms(supabase, formationId);
-  console.log(`[cleanup] formation=${f.name} vms=${vmList.length}`);
+  log.debug(`formation=${f.name} vms=${vmList.length}`);
 
   await deleteGuacUsers(guac, vmList, failures);
   await deleteGuacUserGroup(guac, f, failures);
@@ -197,8 +206,8 @@ export async function deleteFormation(formationId: string) {
   await deleteProxmoxVms(infra.proxmox, f, vmList, failures);
 
   if (failures.length > 0) {
-    console.error(
-      `[cleanup] formation=${formationId} completed with ${failures.length} failures:`,
+    log.error(
+      `formation=${formationId} completed with ${failures.length} failures:`,
       failures
     );
     await markCleanupFailed(supabase, formationId, failures.join("\n"));
@@ -207,10 +216,10 @@ export async function deleteFormation(formationId: string) {
 
   const { error: dbErr } = await supabase.from("formations").delete().eq("id", formationId);
   if (dbErr) {
-    console.error(`[cleanup] DB delete FAILED:`, dbErr.message);
+    log.error("DB delete FAILED:", dbErr.message);
     await markCleanupFailed(supabase, formationId, `db delete: ${dbErr.message}`);
     return;
   }
 
-  console.log(`[cleanup] formation=${formationId} all OK`);
+  log.info(`formation=${formationId} all OK`);
 }

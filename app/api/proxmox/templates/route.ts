@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getTemplates } from "@/lib/services/proxmox";
 import { loadInfraRow, toConfig } from "@/lib/infra/groups";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("proxmox/templates");
 
 export async function GET(request: Request) {
   const supabase = await createServerSupabaseClient();
@@ -23,7 +26,7 @@ export async function GET(request: Request) {
 
   const result = await getTemplates(toConfig(row).proxmox);
   if (!result.success) {
-    console.error("[proxmox/templates]", result.error);
+    log.error(result.error!);
     return NextResponse.json({ error: result.error }, { status: 502 });
   }
   return NextResponse.json(result.data);

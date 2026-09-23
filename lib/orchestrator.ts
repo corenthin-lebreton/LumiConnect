@@ -4,6 +4,7 @@ import { PROVISION_STEPS, initSteps, markStep, skipRemaining } from "@/lib/progr
 import type { StepDefinition } from "@/lib/progress";
 import { decryptSecret } from "@/lib/crypto";
 import { mapWithConcurrency, readConcurrency } from "@/lib/pool";
+import { createLogger } from "@/lib/log";
 import { loadRegistry, type ScriptEntry, type ScriptRegistry } from "@/lib/scripts/registry";
 import { resolveSelection } from "@/lib/scripts/resolve";
 import { CONFIGURE_STEPS, configureVm, scriptSteps } from "@/lib/pipeline/configure-vm";
@@ -17,6 +18,10 @@ import {
 } from "@/lib/pipeline/guacamole-step";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Formation, FormationVm, InfraConfig, ProxmoxConfig } from "@/types";
+
+const log = createLogger("deploy");
+const goldenLog = createLogger("golden");
+const guacLog = createLogger("guacamole");
 
 const CLONE_CONCURRENCY = readConcurrency(process.env.LC_CLONE_CONCURRENCY, 1);
 const VM_CONCURRENCY = readConcurrency(process.env.LC_CONFIGURE_CONCURRENCY, 4);
@@ -59,7 +64,7 @@ export function splitEntries(entries: readonly ScriptEntry[]): SplitEntries {
 
 async function loadSelection(formation: Formation): Promise<Selection | null> {
   if (!formation.os_id) {
-    console.log(`[deploy] formation ${formation.name} sans os_id : configuration in-guest ignorée`);
+    log.info(`formation ${formation.name} sans os_id : configuration in-guest ignorée`);
     return null;
   }
 
@@ -142,7 +147,7 @@ async function buildGoldenImage(
 ): Promise<GoldenResult> {
   const px = infra.proxmox;
   const fail: GoldenFail = async (step, error) => {
-    console.error(`[golden] ${step} échouée vmid=${goldenVmid} :`, error);
+    goldenLog.error(`${step} échouée vmid=${goldenVmid} :`, error);
     await markStep(formation.id, goldenVmid, step, "failed", { message: error });
     return { ok: false, error: `image dorée, ${step} : ${error}` };
   };
@@ -201,7 +206,7 @@ function updateVm(ctx: DeployContext, vmid: number, patch: Record<string, unknow
 async function failVm(ctx: DeployContext, vm: VmContext, step: string, error: string) {
   vm.failed = true;
   vm.failedStep = vm.failedStep ?? step;
-  console.error(`[deploy] ${step} échouée vmid=${vm.vmid} :`, error);
+  log.error(`${step} échouée vmid=${vm.vmid} :`, error);
   await updateVm(ctx, vm.vmid, { status: "failed", error_message: error });
 }
 
@@ -375,7 +380,7 @@ async function provisionAllVms(ctx: DeployContext, vmContexts: VmContext[]) {
   ctx.groupsResult = await createGuacamoleGroups(ctx.infra.guacamole, ctx.formation);
   ctx.groups = ctx.groupsResult.success ? ctx.groupsResult.data! : null;
   if (!ctx.groups) {
-    console.error(`[guacamole] création des groupes échouée :`, ctx.groupsResult.error);
+    guacLog.error("création des groupes échouée :", ctx.groupsResult.error);
   }
 
   await mapWithConcurrency(
@@ -444,7 +449,7 @@ async function abortOnGoldenFailure(
 }
 
 export async function deployFormation(formation: Formation, infra: InfraConfig) {
-  console.log(`[deploy] démarrage de la formation ${formation.name} sur ${infra.name}`);
+  log.info(`démarrage de la formation ${formation.name} sur ${infra.name}`);
   const supabase = createAdminClient();
 
   const vmContexts = buildVmContexts(formation);

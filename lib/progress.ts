@@ -1,5 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createLogger } from "@/lib/log";
 import type { StepStatus } from "@/types";
+
+const log = createLogger("progress");
 
 export interface StepDefinition {
   step: string;
@@ -77,7 +80,7 @@ export async function markStep(
     .eq("step", step);
 
   if (error) {
-    console.error(`[progress] écriture ${step} vmid=${vmid} échouée :`, error.message);
+    log.error(`écriture ${step} vmid=${vmid} échouée :`, error.message);
   }
 }
 
@@ -91,5 +94,5 @@ export async function skipRemaining(formationId: string): Promise<void> {
     .eq("formation_id", formationId)
     .in("status", ["pending", "running"]);
 
-  if (error) console.error(`[progress] clôture des étapes restantes échouée :`, error.message);
+  if (error) log.error("clôture des étapes restantes échouée :", error.message);
 }

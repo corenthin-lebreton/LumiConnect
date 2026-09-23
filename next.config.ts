@@ -9,6 +9,9 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: allowedOrigins(),
 
   experimental: {
+    // Canal de debug React en dev : des morceaux arrivés après fermeture du flux inondent la
+    // console de « Cannot write to a CLOSED writable stream ». Sans effet en production.
+    reactDebugChannel: false,
     serverActions: {
       allowedOrigins: allowedOrigins(),
     },

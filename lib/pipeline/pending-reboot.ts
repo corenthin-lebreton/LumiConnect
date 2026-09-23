@@ -10,6 +10,9 @@
 
 import type { RunScriptOutcome } from "@/lib/services/proxmox-agent";
 import type { ServiceResult } from "@/types";
+import { createLogger } from "@/lib/log";
+
+const log = createLogger("configure");
 
 export const REBOOT_PENDING_EXIT_CODE = 3010;
 
@@ -21,7 +24,7 @@ export async function runWithRebootRetry(
   const first = await run();
   if (first.success || first.data?.exitcode !== REBOOT_PENDING_EXIT_CODE) return first;
 
-  console.log(`[configure] redémarrage en attente avant ${scriptId}`);
+  log.info(`redémarrage en attente avant ${scriptId}`);
   const restarted = await restart();
   if (!restarted.success) {
     return { success: false, error: `redémarrage avant ${scriptId} : ${restarted.error}` };
